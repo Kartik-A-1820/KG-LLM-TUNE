@@ -21,4 +21,4 @@ New-Item -ItemType Directory -Force -Path $env:PIP_CACHE_DIR | Out-Null
 
 . $venvActivate
 
-Write-Host "Activated KG-LLM-TUNE venv on F: with Hugging Face and pip caches under the repo."
+Write-Host "Activated KG-LLM-TUNE venv at $repoRoot with Hugging Face and pip caches under the repo."
