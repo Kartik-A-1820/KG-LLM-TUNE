@@ -51,6 +51,8 @@ runs/*/**
 *.jsonl.gz
 .cache/
 .hf_cache/
+.hf-home/
+.pip-cache/
 huggingface/
 
 # Credentials — never commit these
