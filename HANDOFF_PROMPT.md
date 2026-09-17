@@ -14,7 +14,7 @@ You are working on **KG-LLM-TUNE**. Read this entire brief before doing anything
 
 The project exists in two places, and **they must stay in sync**:
 
-- **Local:** `F:\KG-LLM-TUNE\` (Windows machine)
+- **Local:** `D:\KG-LLM-TUNE\` (Windows machine; moved from `F:\KG-LLM-TUNE\` on 2026-09-17 for space)
 - **Remote:** `https://github.com/Kartik-A-1820/KG-LLM-TUNE` (public)
 
 Pull before you start. Push when you finish. If the two have diverged, stop and report the divergence rather than resolving it by overwriting one side.
@@ -145,7 +145,7 @@ Read `AGENTS.md` in full. The condensed version:
 
 **The benchmark-number rule, which is absolute:** *no number enters any document, commit message, summary, or decision unless it came from a committed results file, and the citation names that file.* Write `entity F1 0.81 (runs/20260920-sft-v3/metrics.json)`. Never interpolate, never infer a number from a related metric, never carry one forward from another project. Mark estimates as estimates with their basis. **If you do not have a number, say you do not have it.** A plausible fabricated metric is more expensive than no metric, because it gets planned against.
 
-**Reproducibility:** pinned versions; seed in the config, never a literal; every run is `script + config`; **no hard-coded paths** (not `F:\...`, not `/kaggle/input/...`); the config is *copied* into the run directory, not referenced. Every run writes `env.json` with commit SHA, dirty-tree flag, versions, GPU, CUDA.
+**Reproducibility:** pinned versions; seed in the config, never a literal; every run is `script + config`; **no hard-coded paths** (not `D:\...`, not `F:\...`, not `/kaggle/input/...`); the config is *copied* into the run directory, not referenced. Every run writes `env.json` with commit SHA, dirty-tree flag, versions, GPU, CUDA.
 
 **Run tracking:** `runs/<timestamp>-<name>/` with `config.yaml`, `env.json`, `metrics.json`, `log.txt`. Failed runs are **kept** and marked failed. `metrics.json` records the gold-set version/hash it scored against. Weights are gitignored; metrics/config/env are committed.
 

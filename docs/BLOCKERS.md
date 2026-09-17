@@ -47,7 +47,7 @@ So even with the correct account signed in, **the Google sign-in flow may not be
 
 **Consequence:** no local run of anything. Gate 0 baselines, the embedding A/B, and all local evaluation wait for his return. Planning, documentation, and repo work proceed — which is what this scaffold is.
 
-**Note:** F: access *did* succeed this session, so the local scaffold at `F:\KG-LLM-TUNE\` exists and mirrors the repo. This is not a permanent grant; expect to re-request it.
+**Note:** F: access *did* succeed in the session that created the scaffold. **The project has since moved to `D:\KG-LLM-TUNE\` (2026-09-17, F: space constraints).** The D: copy is a fresh clone of `open-data-docred-pilot` and matches the remote. `F:\KG-LLM-TUNE\` was deleted after the D: checkout and venv were verified. Folder access is per-session and not a permanent grant; expect to re-request it.
 
 ---
 

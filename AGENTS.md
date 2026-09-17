@@ -33,7 +33,7 @@ A result that cannot be regenerated is not a result.
 - **Pin versions.** `requirements.txt` / `pyproject.toml` pin exact versions, including `transformers`, `torch`, `peft`, `trl`, and the constrained-decoding library. Kaggle's base image moves; pinning is what stops a silent behaviour change from being read as a training improvement.
 - **Seed everything.** `random`, `numpy`, `torch`, and the dataloader. The seed is a config field, never a literal in code. Note in the results file that full determinism on GPU is not guaranteed even so.
 - **Config-driven runs.** Every run is `script + config file`. No editing code to change a hyperparameter. The exact config used is copied into the run's output directory — not referenced by path, copied, because the file on disk will change.
-- **No hard-coded paths.** Not `F:\...`, not `/kaggle/input/...`, not `C:\Users\...`. Paths come from config or environment. The same config must run locally and on Kaggle with only the path block changed.
+- **No hard-coded paths.** Not `D:\...`, not `F:\...`, not `/kaggle/input/...`, not `C:\Users\...`. Paths come from config or environment. The same config must run locally and on Kaggle with only the path block changed.
 - **Record the environment.** Every run writes `env.json`: git commit SHA, dirty-tree flag, python version, key package versions, GPU name, CUDA version. A run from a dirty tree is marked dirty and its numbers are provisional.
 
 ## 4. Experiment tracking
