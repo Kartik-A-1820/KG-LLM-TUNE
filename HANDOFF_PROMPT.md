@@ -56,11 +56,16 @@ Why the line falls there: extraction is high-volume, schema-structured, and veri
 
 These came out of a completed feasibility assessment. They are settled. If you believe one is wrong, **say so explicitly and wait** — do not quietly substitute an alternative.
 
-**Model:** Qwen3-0.6B in non-thinking mode (`enable_thinking=False`). Thinking tokens are pure cost on a structured extraction task.
+**Model (primary): SmolLM2-360M-Instruct.** Chosen deliberately, with full knowledge that the prior feasibility assessment puts it ~9 F1 points behind a 0.5B. The size and speed are worth the risk to Kartik; the risk is managed, not ignored. Do not substitute a different base model.
 
-**Runner-up / de-risked fallback:** Qwen2.5-0.5B-Instruct, which has a published extraction F1 of 0.828 on this task class. (External figure, not measured here.)
+**Benchmark comparison:** Qwen3-0.6B in non-thinking mode (`enable_thinking=False`) — thinking tokens are pure cost on a structured task. The early local LoRA pilot runs both models side by side on the same 1–5k subset, because the question that matters is whether the 9-point gap survives fine-tuning *on this corpus*, and no published result answers that. This pilot is diagnostic, not a gate number: a few hours now against weeks of potential rework.
 
-**Explicitly rejected:** SmolLM2-360M. It costs ~9 F1 points versus the 0.5B and collapses without few-shot prompting.
+**Fallback:** Qwen2.5-0.5B-Instruct — the prior feasibility assessment cites published extraction F1 of 0.828 on this task class (external figure, not measured here).
+
+**Two 360M-specific risks that are planning constraints, not footnotes:**
+
+1. **Few-shot dependence.** The prior feasibility assessment records 0.527 F1 zero-shot vs 0.735 with 2-shot (external figures, not measured here). If demonstrations must stay in the production prompt, their tokens enter every chunk's context and **erode the throughput advantage that motivated the smaller model**. Gate 1 throughput must therefore be measured with the prompt that actually ships, demonstrations included.
+2. **8k context is a hard budget.** A ~1,200-token chunk plus 2-shot plus schema fits. There is no headroom for wider chunks, more shots, or gleaning passes. Every prompt design must fit inside 8k, or the model choice changes.
 
 **Embedding:** EmbeddingGemma-300M primary, with **potion-retrieval-32M as a serious A/B**, not a token alternative. potion is ~200× faster on CPU, and the hypothesis is that graph traversal carries enough of GraphRAG's retrieval load that the quality gap may not show up end to end. A/B is decided on end-to-end answer quality, not embedding-leaderboard scores.
 
@@ -77,8 +82,8 @@ These came out of a completed feasibility assessment. They are settled. If you b
 
 | Where | What | Why |
 | --- | --- | --- |
-| **Local 1650 Ti (3.4 GB), plain LoRA** | Overfit-a-tiny-batch checks, pipeline debugging, checkpoint-and-resume tests, HP sanity, 1–5k pilots | LoRA on 0.6B is ~2.0–3.0 GB and fits. Getting the loop right before spending a Kaggle session is good practice |
-| **Kaggle T4 (16 GB), full fine-tune** | Real SFT runs, rejection sampling at volume, **anything producing a gate number** | Full FT needs ~6.5 GB and doesn't fit locally; the local card is an estimated 25–50× slower than a 4090, so a 4–8 h T4 run is weeks |
+| **Local 1650 Ti (3.4 GB), plain LoRA** | Overfit-a-tiny-batch checks, pipeline debugging, checkpoint-and-resume tests, HP sanity, 1–5k pilots, the Gate 0 model bake-off | LoRA on 360M is ~1.0–1.5 GB, on 0.6B ~2.0–3.0 GB — both fit. Getting the loop right before spending a Kaggle session is good practice |
+| **Kaggle T4 (16 GB), full fine-tune** | Real SFT runs, rejection sampling at volume, **anything producing a gate number** | The 360M full-FT footprint is not measured yet; Kaggle is the default for the shipping recipe until a committed memory test proves local full FT is viable. The local card is an estimated 25–50× slower than a 4090, so a 4–8 h T4 run is weeks |
 
 Real runs are **full fine-tune, not LoRA**, because this is **task shift** — a new output format and a new behaviour — which is the regime where the LoRA-Learns-Less evidence favours full FT. LoRA is the iteration tool, not the shipping recipe. **Never report a local LoRA number against a gate threshold.**
 
@@ -104,7 +109,7 @@ Grammar constrains *shape*; overlap constrains *groundedness*. Both are required
 
 All metrics are measured against a **hand-annotated gold set from Kartik's own corpus** (200–500 examples), not a public benchmark and not teacher output.
 
-**Gate 0 — baseline, before any training.** Measure stock Qwen3-0.6B, a 7B-class model, and the teacher on the gold set with identical prompts and decoder. Proceed only if fine-tuning has visible headroom. Stop and rethink if stock 0.6B is already near the teacher, if the teacher itself scores poorly (the schema is the problem, not the model), or if the 7B already solves it at acceptable local speed.
+**Gate 0 — baseline, before any training.** Measure stock SmolLM2-360M, stock Qwen3-0.6B, a 7B-class model, and the teacher on the gold set with identical prompts and decoder — each small model **with and without demonstrations**. Then run the **side-by-side LoRA pilot** (360M vs 0.6B, same 1–5k subset) described in §5 as a diagnostic, not as a gate number. Proceed only if fine-tuning has visible headroom. Stop and rethink if the stock primary is already near the teacher, if the teacher itself scores poorly (the schema is the problem, not the model), or if the 7B already solves it at acceptable local speed.
 
 **Gate 1 — SFT:**
 
@@ -146,7 +151,14 @@ Read `AGENTS.md` in full. The condensed version:
 
 **Notebooks:** exploration and Kaggle execution only. Training logic lives in `src/kg_llm_tune/`; the Kaggle notebook is a thin driver that clones a **pinned commit SHA**. Anything copied into a second notebook graduates to `src/`. Strip outputs. No notebook is ever the source of a benchmark number.
 
-**Checkpoint-and-resume is a first-class requirement.** Save optimizer, scheduler, and RNG state — weights-only checkpoints make resume a lie. Test resume by deliberately killing a short run, locally, before the first long Kaggle run.
+**Kaggle notebook requirements — designed in, not retrofitted:**
+
+- The notebook is **generated from locally-validated code**, never written independently. Validate the loop locally with LoRA on a small subset first. Divergence between the local and Kaggle training paths is how these projects break — two separately-written loops drift on a tokenizer flag, and the bug surfaces as "Kaggle scored worse" rather than as an error.
+- Sessions complete inside the limit **by design**: a graceful stop at **8–9 hours**, triggered by an **elapsed-time watchdog checked inside the training loop**, not by estimating up front that the run will fit.
+- On stop, the sequence is fixed: finish the current step → save weights → optimizer state → scheduler state → RNG state → step/epoch counters → write a **resume manifest** → **exit cleanly** so `/kaggle/working` is preserved. An unclean exit loses the outputs and turns a graceful stop into a lost session.
+- **Resume is first-class from day one, and must continue the LR schedule and data ordering — not silently restart them.** This is the classic bug: a resumed run that restarts warmup or reshuffles from epoch zero produces a plausible loss curve and an **invalid result**, without crashing or warning. Assert both continue.
+- **Checkpoint periodically as well as at the time limit**, so an unexpected disconnect costs at most N steps.
+- Save optimizer, scheduler, and RNG state — weights-only checkpoints make resume a lie. Test resume by deliberately killing a short run, locally, before the first long Kaggle run.
 
 **Data provenance:** every dataset gets a row in `data/README.md` (URL, licence, date, SHA, use). `Babelscape/rebel-dataset` is **CC-BY-SA-4.0** — share-alike, with implications for derived data; do not include it until the repo licence is settled. Teacher ToS must be checked for output-use restrictions before generating training data.
 

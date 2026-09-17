@@ -38,14 +38,14 @@ These came out of a completed feasibility assessment. They are settled; reopen t
 
 | Decision | Choice | Why |
 | --- | --- | --- |
-| Model | Qwen3-0.6B, non-thinking mode (`enable_thinking=False`) | Best sub-1B candidate; thinking mode wastes tokens on a structured task |
-| Fallback model | Qwen2.5-0.5B-Instruct | De-risked — published extraction F1 of 0.828 on this task class |
-| Rejected model | SmolLM2-360M | ~9 F1 points worse than 0.5B and collapses without few-shot prompting |
+| **Model (primary)** | **SmolLM2-360M-Instruct** | Chosen deliberately for size and speed, with the ~9 F1 gap from the prior feasibility assessment accepted as a known, managed risk |
+| Benchmark comparison | Qwen3-0.6B, non-thinking mode (`enable_thinking=False`) | Run at Gate 0 alongside the 360M on the same pilot subset, then later as a full comparison |
+| Fallback | Qwen2.5-0.5B-Instruct | De-risked — prior feasibility assessment cites published extraction F1 of 0.828 on this task class |
 | Embedding | EmbeddingGemma-300M primary, potion-retrieval-32M as a serious A/B | potion is ~200× faster on CPU; graph traversal may carry enough retrieval load that the quality gap costs nothing measurable |
 | Training | SFT → rejection-sampling self-distillation → constrained decoding at inference | Tasks are verifiable, so a verifier plus rejection sampling beats preference optimisation |
 | Dropped | DPO, RLHF, GRPO | Verifiable tasks don't need preference optimisation; GRPO's ~5 GB floor does not fit 3.4 GB of VRAM anyway |
-| Real training runs | Kaggle T4 (16 GB), full fine-tune | Full FT of 0.6B needs ~6.5 GB, and the 1650 Ti is an estimated 25–50× slower than a 4090 — a 4–8 h T4 run would be weeks |
-| Iteration training runs | **Local 1650 Ti, plain LoRA** | LoRA on 0.6B is ~2.0–3.0 GB and fits 3.4 GB. Pilots, debugging, resume tests, HP sanity checks belong here |
+| Real training runs | Kaggle T4 (16 GB), full fine-tune | Gate numbers come from the shipping full-FT recipe. The 360M full-FT footprint is not measured yet; Kaggle stays the default until a committed memory test proves otherwise |
+| Iteration training runs | **Local 1650 Ti, plain LoRA** | LoRA on 360M is expected around 1.0–1.5 GB; LoRA on 0.6B is ~2.0–3.0 GB. Pilots, debugging, resume tests, HP sanity checks belong here |
 | Local hardware role | LoRA iteration, inference, evaluation, integration | Not a full-FT box, but genuinely a training box |
 | Constrained decoding | XGrammar or Outlines | Guarantees parseable output |
 
@@ -55,6 +55,15 @@ Two consequences of that last row are load-bearing and appear throughout the doc
 2. **T4 is SM 7.5**, so fp16 + `GradScaler`. No bf16. Any config or notebook that assumes bf16 is wrong for this project. (The local 1650 Ti is SM 7.5 too.)
 
 And one local-training consequence worth knowing before the first run: on SM 7.5 there is **no FlashAttention-2**, so naive attention at sequence length 4096 costs roughly **537 MB per layer**. Since extraction prompts are long, *context length — not parameter count — is what will OOM the local card*. Local training must explicitly use PyTorch SDPA's memory-efficient backend or xformers. Prefer plain LoRA over QLoRA locally: 4-bit saves only ~540 MB on a 0.72 GB base and costs dequantisation overhead.
+
+### Two risks that come with the 360M choice
+
+Accepted, not ignored. Both are planning constraints:
+
+1. **It may still need few-shot prompting in production.** The prior feasibility assessment records SmolLM2-360M at **0.527 F1 without few-shot** versus **0.735 with 2-shot** (external figures, not measured here). If the production prompt has to carry demonstrations, those tokens go into every chunk's context — which erodes the throughput advantage that motivated picking the smaller model. Measure the with- and without-demonstration throughput, not just the quality.
+2. **8k context is a hard planning constraint.** It fits a ~1,200-token chunk plus 2-shot demonstrations, but leaves no headroom for wider chunks, more shots, or gleaning passes. Any design that wants larger chunks or multi-round gleaning has to fit inside 8k or change model.
+
+Gate 0 includes **both** SmolLM2-360M and Qwen3-0.6B in the baseline, and the early local LoRA pilot runs them side by side on the same subset. That pilot is diagnostic, not a gate number, but it answers whether the 9-point external gap appears likely to survive fine-tuning on this corpus before weeks are committed either way. See [`docs/PHASE1_GOALS.md`](docs/PHASE1_GOALS.md).
 
 ## Top risk
 
