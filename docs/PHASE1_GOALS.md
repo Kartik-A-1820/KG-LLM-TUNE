@@ -28,8 +28,8 @@ What replaces it is **semantic value accuracy**: given that the output parses, a
 
 | System | Role |
 | --- | --- |
-| Stock SmolLM2-360M-Instruct | **the chosen primary** — the starting point |
-| Stock Qwen3-0.6B (non-thinking) | benchmark comparison |
+| Stock SmolLM2-360M-Instruct | **Kartik's chosen primary** — the starting point |
+| Stock Qwen3-0.6B (non-thinking) | benchmark comparison, not co-primary |
 | A 7B-class instruct model | the "just use a bigger local model" alternative |
 | The teacher model | the ceiling, and the thing being distilled |
 
@@ -39,13 +39,13 @@ Report the same metric set as Gate 1 for each. Measure each of the two small mod
 
 **This is cheap de-risking, and it is worth doing before anything long is committed. It is diagnostic; it does not produce official gate numbers.**
 
-SmolLM2-360M is the chosen primary. The prior feasibility assessment says it costs roughly 9 F1 points versus a 0.5B — but that evidence is about *stock* models on *other people's* data. The question that actually decides this project is different and narrower:
+SmolLM2-360M is Kartik's chosen primary. The prior feasibility assessment says it costs roughly 9 F1 points versus a 0.5B — but that evidence is about *stock* models on *other people's* data. The pilot does not decide whether Qwen becomes co-primary; it validates and de-risks the SmolLM2-first plan by asking a narrower question:
 
 > **Does the 9-point gap survive fine-tuning on this corpus?**
 
 Nothing in the literature answers that, because the literature did not fine-tune on this corpus.
 
-**The experiment:** local LoRA on a 1–5k example subset, same data, same prompts, same eval — **SmolLM2-360M and Qwen3-0.6B side by side**. A few hours on the local card. Cost: an afternoon.
+**The experiment:** local LoRA on a 1–5k example subset, same data, same prompts, same eval — **SmolLM2-360M and Qwen3-0.6B side by side**. A few hours on the local card. Cost: an afternoon. Outcome: evidence about whether the SmolLM2-first choice is holding, not permission to quietly reverse the model priority.
 
 **Why it is worth the afternoon, whichever way it lands:**
 
@@ -78,7 +78,7 @@ Treat 8k as a fixed budget that every prompt design must fit inside. Any Phase 2
 - The teacher itself scores poorly on the gold set → the task definition or entity schema is the problem, not the model. Fix the schema before training anything.
 - The 7B matches the teacher at acceptable throughput on the local box → the project's premise (needing a sub-1B) needs re-examination.
 
-**Deliverable:** `runs/gate0-baseline/metrics.json` with one block per system (each with and without demonstrations), plus diagnostic pilot run directories such as `runs/pilot-lora-360m/` and `runs/pilot-lora-qwen06b/` from the side-by-side pilot, and a short written read of where the headroom is and whether the model choice holds.
+**Deliverable:** `runs/gate0-baseline/metrics.json` with one block per system (each with and without demonstrations), plus diagnostic pilot run directories such as `runs/pilot-lora-360m/` and `runs/pilot-lora-qwen06b/` from the side-by-side pilot, and a short written read of where the headroom is and whether the SmolLM2-first choice is holding.
 
 ---
 

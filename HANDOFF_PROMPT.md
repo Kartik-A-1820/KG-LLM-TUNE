@@ -54,11 +54,11 @@ Why the line falls there: extraction is high-volume, schema-structured, and veri
 
 ## 5. Decided technical choices — do not change these without flagging
 
-These came out of a completed feasibility assessment. They are settled. If you believe one is wrong, **say so explicitly and wait** — do not quietly substitute an alternative.
+These came out of a completed feasibility assessment plus Kartik's explicit model-priority decision. They are settled. If you believe one is wrong, **say so explicitly and wait** — do not quietly substitute an alternative.
 
-**Model (primary): SmolLM2-360M-Instruct.** Chosen deliberately, with full knowledge that the prior feasibility assessment puts it ~9 F1 points behind a 0.5B. The size and speed are worth the risk to Kartik; the risk is managed, not ignored. Do not substitute a different base model.
+**Model (primary): SmolLM2-360M-Instruct.** This is Kartik's explicit primary choice. It was chosen deliberately, with full knowledge that the prior feasibility assessment puts it ~9 F1 points behind a 0.5B. The size and speed are worth the risk to Kartik; the risk is managed, not ignored. Do not substitute a different base model.
 
-**Benchmark comparison:** Qwen3-0.6B in non-thinking mode (`enable_thinking=False`) — thinking tokens are pure cost on a structured task. The early local LoRA pilot runs both models side by side on the same 1–5k subset, because the question that matters is whether the 9-point gap survives fine-tuning *on this corpus*, and no published result answers that. This pilot is diagnostic, not a gate number: a few hours now against weeks of potential rework.
+**Benchmark comparison, not co-primary:** Qwen3-0.6B in non-thinking mode (`enable_thinking=False`) — thinking tokens are pure cost on a structured task. The early local LoRA pilot runs both models side by side on the same 1–5k subset to validate and de-risk Kartik's primary-model choice: does the 9-point external gap survive fine-tuning *on this corpus*? This pilot is diagnostic, not a gate number and not a model-priority vote.
 
 **Fallback:** Qwen2.5-0.5B-Instruct — the prior feasibility assessment cites published extraction F1 of 0.828 on this task class (external figure, not measured here).
 
@@ -109,7 +109,7 @@ Grammar constrains *shape*; overlap constrains *groundedness*. Both are required
 
 All metrics are measured against a **hand-annotated gold set from Kartik's own corpus** (200–500 examples), not a public benchmark and not teacher output.
 
-**Gate 0 — baseline, before any training.** Measure stock SmolLM2-360M, stock Qwen3-0.6B, a 7B-class model, and the teacher on the gold set with identical prompts and decoder — each small model **with and without demonstrations**. Then run the **side-by-side LoRA pilot** (360M vs 0.6B, same 1–5k subset) described in §5 as a diagnostic, not as a gate number. Proceed only if fine-tuning has visible headroom. Stop and rethink if the stock primary is already near the teacher, if the teacher itself scores poorly (the schema is the problem, not the model), or if the 7B already solves it at acceptable local speed.
+**Gate 0 — baseline, before any training.** Measure stock SmolLM2-360M, stock Qwen3-0.6B, a 7B-class model, and the teacher on the gold set with identical prompts and decoder — each small model **with and without demonstrations**. Then run the **side-by-side LoRA pilot** (360M vs 0.6B, same 1–5k subset) described in §5 to validate and de-risk the SmolLM2 primary choice; it is diagnostic, not a gate number, and it does not make Qwen co-primary. Proceed only if fine-tuning has visible headroom. Stop and rethink if the stock primary is already near the teacher, if the teacher itself scores poorly (the schema is the problem, not the model), or if the 7B already solves it at acceptable local speed.
 
 **Gate 1 — SFT:**
 

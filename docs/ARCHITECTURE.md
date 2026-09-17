@@ -28,7 +28,7 @@ flowchart TD
     end
 
     subgraph LP["LOCAL 1650 Ti 3.4GB — iterate"]
-        SFT --> PIL["LoRA pilot: SmolLM2-360M ~1-1.5GB<br/>Gate 0 side-by-side vs Qwen3-0.6B<br/>overfit-tiny-batch, resume test, HP sanity<br/>SDPA mem-efficient / xformers REQUIRED"]
+        SFT --> PIL["LoRA pilot: SmolLM2-360M primary ~1-1.5GB<br/>diagnostic side-by-side vs Qwen3-0.6B<br/>overfit-tiny-batch, resume test, HP sanity<br/>SDPA mem-efficient / xformers REQUIRED"]
     end
 
     subgraph K["KAGGLE T4 16GB — real runs"]

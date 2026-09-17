@@ -19,7 +19,7 @@ paths:
   checkpoint_dir: null         # set per environment; Kaggle uses its working output area
 
 model:
-  base: HuggingFaceTB/SmolLM2-360M-Instruct   # Phase 1 primary
+  base: HuggingFaceTB/SmolLM2-360M-Instruct   # Kartik's Phase 1 primary
   # Benchmark comparison: Qwen/Qwen3-0.6B with enable_thinking: false
   # (thinking tokens are pure cost on a structured extraction task).
   # Fallback if both underperform: Qwen/Qwen2.5-0.5B-Instruct

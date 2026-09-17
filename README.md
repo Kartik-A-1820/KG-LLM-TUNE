@@ -34,11 +34,11 @@ This matters because extraction is the high-volume call — it is per-chunk, it 
 
 ## Decisions already made
 
-These came out of a completed feasibility assessment. They are settled; reopen them only with new evidence, not new opinion.
+These came out of a completed feasibility assessment plus Kartik's explicit model-priority decision. They are settled; reopen them only with new evidence, not new opinion.
 
 | Decision | Choice | Why |
 | --- | --- | --- |
-| **Model (primary)** | **SmolLM2-360M-Instruct** | Chosen deliberately for size and speed, with the ~9 F1 gap from the prior feasibility assessment accepted as a known, managed risk |
+| **Model (primary)** | **SmolLM2-360M-Instruct** | Kartik's explicit primary choice: choose the smaller, faster model first, with the ~9 F1 gap from the prior feasibility assessment accepted as a known, managed risk |
 | Benchmark comparison | Qwen3-0.6B, non-thinking mode (`enable_thinking=False`) | Run at Gate 0 alongside the 360M on the same pilot subset, then later as a full comparison |
 | Fallback | Qwen2.5-0.5B-Instruct | De-risked — prior feasibility assessment cites published extraction F1 of 0.828 on this task class |
 | Embedding | EmbeddingGemma-300M primary, potion-retrieval-32M as a serious A/B | potion is ~200× faster on CPU; graph traversal may carry enough retrieval load that the quality gap costs nothing measurable |
@@ -63,7 +63,7 @@ Accepted, not ignored. Both are planning constraints:
 1. **It may still need few-shot prompting in production.** The prior feasibility assessment records SmolLM2-360M at **0.527 F1 without few-shot** versus **0.735 with 2-shot** (external figures, not measured here). If the production prompt has to carry demonstrations, those tokens go into every chunk's context — which erodes the throughput advantage that motivated picking the smaller model. Measure the with- and without-demonstration throughput, not just the quality.
 2. **8k context is a hard planning constraint.** It fits a ~1,200-token chunk plus 2-shot demonstrations, but leaves no headroom for wider chunks, more shots, or gleaning passes. Any design that wants larger chunks or multi-round gleaning has to fit inside 8k or change model.
 
-Gate 0 includes **both** SmolLM2-360M and Qwen3-0.6B in the baseline, and the early local LoRA pilot runs them side by side on the same subset. That pilot is diagnostic, not a gate number, but it answers whether the 9-point external gap appears likely to survive fine-tuning on this corpus before weeks are committed either way. See [`docs/PHASE1_GOALS.md`](docs/PHASE1_GOALS.md).
+Gate 0 includes **both** SmolLM2-360M and Qwen3-0.6B in the baseline, and the early local LoRA pilot runs them side by side on the same subset. That pilot validates and de-risks Kartik's primary-model choice; it does not make Qwen co-primary, and it is diagnostic rather than a gate number. See [`docs/PHASE1_GOALS.md`](docs/PHASE1_GOALS.md).
 
 ## Top risk
 

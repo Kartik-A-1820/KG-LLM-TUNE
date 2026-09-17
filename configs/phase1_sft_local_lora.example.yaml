@@ -18,7 +18,7 @@ paths:
   cache: data/cache
 
 model:
-  base: HuggingFaceTB/SmolLM2-360M-Instruct   # Phase 1 primary
+  base: HuggingFaceTB/SmolLM2-360M-Instruct   # Kartik's Phase 1 primary
   # The early diagnostic pilot runs this side by side with Qwen/Qwen3-0.6B
   # on the same subset.
   # Cheap de-risking: does the ~9 F1 gap survive fine-tuning on this corpus?
