@@ -1,0 +1,28 @@
+{
+  "device": "cpu",
+  "elapsed_seconds": 1.565,
+  "epochs": 2,
+  "final_val_loss": 10.814852237701416,
+  "initial_val_loss": 10.818822622299194,
+  "losses": [
+    {
+      "epoch": 1,
+      "train_loss": 10.818470478057861,
+      "val_loss": 10.816772699356079
+    },
+    {
+      "epoch": 2,
+      "train_loss": 10.815793633460999,
+      "val_loss": 10.814852237701416
+    }
+  ],
+  "model": "sshleifer/tiny-gpt2",
+  "note": "Diagnostic loss smoke only. Not a gate metric.",
+  "perplexity_final": 49754.303318060505,
+  "perplexity_initial": 49952.23971942576,
+  "seed": 1820,
+  "status": "complete",
+  "train_examples": 8,
+  "val_examples": 4,
+  "val_loss_delta": -0.00397038459777832
+}

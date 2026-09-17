@@ -25,7 +25,7 @@ Every dataset used gets a row. A dataset with no row is not used. Fill in at pul
 
 | Dataset | Source URL | Licence | Date pulled | SHA | Used for |
 | --- | --- | --- | --- | --- | --- |
-| *(none yet)* | | | | | |
+| `thunlp/docred` | https://huggingface.co/datasets/thunlp/docred | MIT, per Hugging Face dataset tag | not pulled yet | record `manifest.json` SHA after `scripts/prepare_docred_sft.py` runs | Open-data SFT smoke / format bootstrap only; not a gate metric |
 
 Licence is verified against the actual copy downloaded, not against the paper.
 
