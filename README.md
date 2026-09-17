@@ -1,0 +1,109 @@
+# KG-LLM-TUNE
+
+**Fine-tune a sub-1B model to own the extraction path of a GraphRAG pipeline, so that indexing runs locally at speed instead of costing a large-model API call per chunk.**
+
+That is the whole point of this repo. Everything below is detail.
+
+## The split: extraction vs synthesis
+
+A GraphRAG pipeline makes many LLM calls. They are not the same kind of call.
+
+**Owned by the fine-tuned small model (this project):**
+
+- entity extraction
+- relation extraction
+- entity descriptions and relation descriptions
+- claim / covariate extraction
+- query routing (local vs global vs direct)
+
+**Stays with a larger model:**
+
+- community report generation
+- global-search map-reduce
+- final answer synthesis
+
+The dividing line is **extraction vs synthesis**, not index-time vs query-time. Query routing is index-agnostic but it is a short classification, so it comes to the small model. Community reports are index-time but they are long-form abstractive writing, so they stay with the big one.
+
+This matters because extraction is the high-volume call — it is per-chunk, it is structured, and it is verifiable. Those three properties are exactly what makes it a good fine-tuning target and a bad place to spend API budget.
+
+## Two phases
+
+**Phase 1 — the models.** Produce a fine-tuned extraction model and a selected embedding model, both validated against a hand-annotated gold set from Kartik's own corpus. Phase 1 is what this repo currently contains. It ends when the Gate 3 downstream check in [`docs/PHASE1_GOALS.md`](docs/PHASE1_GOALS.md) passes.
+
+**Phase 2 — the pipeline.** Build the full GraphRAG architecture running locally on Phase 1's models: chunking, graph construction, community detection, embeddings, hybrid local/global search. Phase 2 does not start until Phase 1 has a packaged, gated model. Nothing in this repo commits to a Phase 2 design yet.
+
+## Decisions already made
+
+These came out of a completed feasibility assessment. They are settled; reopen them only with new evidence, not new opinion.
+
+| Decision | Choice | Why |
+| --- | --- | --- |
+| Model | Qwen3-0.6B, non-thinking mode (`enable_thinking=False`) | Best sub-1B candidate; thinking mode wastes tokens on a structured task |
+| Fallback model | Qwen2.5-0.5B-Instruct | De-risked — published extraction F1 of 0.828 on this task class |
+| Rejected model | SmolLM2-360M | ~9 F1 points worse than 0.5B and collapses without few-shot prompting |
+| Embedding | EmbeddingGemma-300M primary, potion-retrieval-32M as a serious A/B | potion is ~200× faster on CPU; graph traversal may carry enough retrieval load that the quality gap costs nothing measurable |
+| Training | SFT → rejection-sampling self-distillation → constrained decoding at inference | Tasks are verifiable, so a verifier plus rejection sampling beats preference optimisation |
+| Dropped | DPO, RLHF, GRPO | Verifiable tasks don't need preference optimisation; GRPO's ~5 GB floor does not fit 3.4 GB of VRAM anyway |
+| Real training runs | Kaggle T4 (16 GB), full fine-tune | Full FT of 0.6B needs ~6.5 GB, and the 1650 Ti is an estimated 25–50× slower than a 4090 — a 4–8 h T4 run would be weeks |
+| Iteration training runs | **Local 1650 Ti, plain LoRA** | LoRA on 0.6B is ~2.0–3.0 GB and fits 3.4 GB. Pilots, debugging, resume tests, HP sanity checks belong here |
+| Local hardware role | LoRA iteration, inference, evaluation, integration | Not a full-FT box, but genuinely a training box |
+| Constrained decoding | XGrammar or Outlines | Guarantees parseable output |
+
+Two consequences of that last row are load-bearing and appear throughout the docs:
+
+1. **Schema validity becomes 100% by construction, so it measures nothing.** Never report parse rate as a result. Gate on semantic value accuracy — are the entity strings and relation endpoints *right*, not merely well-formed.
+2. **T4 is SM 7.5**, so fp16 + `GradScaler`. No bf16. Any config or notebook that assumes bf16 is wrong for this project. (The local 1650 Ti is SM 7.5 too.)
+
+And one local-training consequence worth knowing before the first run: on SM 7.5 there is **no FlashAttention-2**, so naive attention at sequence length 4096 costs roughly **537 MB per layer**. Since extraction prompts are long, *context length — not parameter count — is what will OOM the local card*. Local training must explicitly use PyTorch SDPA's memory-efficient backend or xformers. Prefer plain LoRA over QLoRA locally: 4-bit saves only ~540 MB on a 0.72 GB base and costs dequantisation overhead.
+
+## Top risk
+
+**Description hallucination poisoning the graph.** A wrong entity is one wrong node. A fabricated description is a plausible-sounding lie that propagates into community reports, into embeddings, and into every answer that touches that node — and it looks fine on inspection.
+
+Mitigation is mandatory, not optional:
+
+- train descriptions as **spans or near-spans of the source chunk**, not as free generation
+- enforce **source-overlap at decode time**, so a description that drifts from the chunk cannot be emitted
+- measure **description faithfulness** as a first-class gate metric (Gate 1 threshold ≥0.95, stop below 0.90)
+
+## Status
+
+Phase 1, pre-Gate-0. Scaffold and planning only. No training has been run, no models downloaded, no data collected.
+
+The immediate critical path is the **gold set** — 200–500 hand-annotated examples from Kartik's own corpus. Everything else in Phase 1 is measured against it, so nothing downstream can start until it exists. See [`docs/DATA_STRATEGY.md`](docs/DATA_STRATEGY.md).
+
+Known blockers are tracked in [`docs/BLOCKERS.md`](docs/BLOCKERS.md) rather than left implicit. Two of them are policy questions only Kartik can answer.
+
+## Getting started
+
+```bash
+git clone https://github.com/Kartik-A-1820/KG-LLM-TUNE.git
+cd KG-LLM-TUNE
+python -m venv .venv && .venv\Scripts\activate    # Windows
+pip install -e .                                   # pyproject not written yet
+```
+
+Then read, in this order:
+
+1. [`docs/PHASE1_GOALS.md`](docs/PHASE1_GOALS.md) — what "done" means, with numeric stop conditions
+2. [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — how the pieces fit and what runs where
+3. [`docs/DATA_STRATEGY.md`](docs/DATA_STRATEGY.md) — where training data comes from and what it costs
+4. [`AGENTS.md`](AGENTS.md) — the rules for working in this repo, human or agent
+
+[`HANDOFF_PROMPT.md`](HANDOFF_PROMPT.md) is a self-contained briefing to paste when delegating work to another agent with no context on the project. Keep it current as decisions change.
+
+## Layout
+
+```
+src/kg_llm_tune/   library code — anything reused lives here, not in a notebook
+notebooks/         exploration and Kaggle training notebooks only
+configs/           YAML run configs; every run is driven by one
+data/              gitignored; see data/README.md for expected layout
+eval/              gold set and evaluation harness — the ground truth of this project
+scripts/           thin CLI entry points over src/
+docs/              planning and design documents
+```
+
+## Licence
+
+Not yet chosen. Note that some candidate training datasets are CC-BY-SA-4.0, which has share-alike implications for derived data — see [`docs/DATA_STRATEGY.md`](docs/DATA_STRATEGY.md) before picking one.

@@ -1,0 +1,70 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+build/
+dist/
+*.egg-info/
+.eggs/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Environments
+.venv/
+venv/
+env/
+.env
+.env.*
+!.env.example
+
+# Notebooks
+.ipynb_checkpoints/
+*-checkpoint.ipynb
+
+# Data — nothing from the corpus is committed. See data/README.md.
+data/
+!data/README.md
+!data/.gitkeep
+
+# Model weights and artifacts
+*.safetensors
+*.bin
+*.pt
+*.pth
+*.ckpt
+*.gguf
+*.onnx
+models/
+checkpoints/
+
+# Run outputs — metrics/config/env ARE committed, weights are not.
+runs/*/**
+!runs/*/metrics.json
+!runs/*/config.yaml
+!runs/*/env.json
+
+# Datasets and caches
+*.arrow
+*.parquet
+*.jsonl.gz
+.cache/
+.hf_cache/
+huggingface/
+
+# Credentials — never commit these
+kaggle.json
+*.pem
+*.key
+secrets.yaml
+
+# OS / editor
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+
+# The gold set is committed on purpose — do not let a broad rule eat it.
+!eval/gold/**
