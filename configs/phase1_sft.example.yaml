@@ -1,0 +1,86 @@
+# Template for the Phase 1 SFT run. Copy to a named config; do not edit in place.
+# Nothing here has been validated by an actual run — values marked ESTIMATE are
+# starting points to be tuned, not measurements.
+
+run:
+  name: sft-v0
+  seed: 1820
+  # Full determinism on GPU is not guaranteed even with the seed set; runs record
+  # this fact in env.json rather than pretending otherwise.
+  output_dir: runs/            # run subdir is timestamped by runs.py
+
+paths:
+  # The only block that changes between local and Kaggle.
+  corpus: null                 # set per environment
+  sft_train: null
+  sft_val: null
+  gold_set: eval/gold/v1
+  cache: data/cache
+
+model:
+  base: Qwen/Qwen3-0.6B
+  enable_thinking: false       # structured extraction; thinking tokens are pure cost
+  # Fallback if Qwen3-0.6B underperforms: Qwen/Qwen2.5-0.5B-Instruct
+  # (published extraction F1 0.828 on this task class — external figure, not ours)
+  max_seq_len: 2048
+
+train:
+  strategy: full               # full FT of 0.6B needs ~6.5 GB; fits T4, not the 1650 Ti
+  precision: fp16              # T4 is SM 7.5 — no bf16. Not a preference.
+  grad_scaler: true
+  epochs: 3                    # ESTIMATE
+  lr: 1.0e-5                   # ESTIMATE
+  lr_schedule: cosine
+  warmup_ratio: 0.03
+  per_device_batch_size: 4     # ESTIMATE — tune to T4 memory, not copied from a blog
+  grad_accum_steps: 8
+  gradient_checkpointing: true
+  weight_decay: 0.01
+  max_grad_norm: 1.0
+
+checkpoint:
+  # Checkpoint-and-resume is a hard requirement, not a nice-to-have.
+  # N x step-time must sit comfortably under the Kaggle session limit.
+  every_n_steps: 200           # ESTIMATE — set from measured step time
+  keep_last: 3
+  save_optimizer: true         # weights-only checkpoints make resume a lie
+  save_scheduler: true
+  save_rng_state: true
+  resume_from: null            # single flag flips a run into resume
+
+decode:
+  # Inference-time only. Training sees ordinary text.
+  backend: xgrammar            # or: outlines
+  grammar_dir: grammar/
+  # Source-overlap enforcement — primary mitigation for description hallucination.
+  description_overlap_min: 0.7 # ESTIMATE — tune once on the gold set, then freeze
+  temperature: 0.0
+  max_new_tokens: 512
+
+eval:
+  gold_version: v1
+  batch_size: 16               # throughput is measured batched, with the grammar on
+  metrics:
+    - entity_precision
+    - entity_recall
+    - entity_f1
+    - relation_triple_f1_strict
+    - description_faithfulness
+    - throughput_tok_s
+  # Deliberately absent: schema_validity / parse_rate.
+  # Constrained decoding makes it 100% by construction, so it measures nothing.
+
+gates:
+  # Mirrors docs/PHASE1_GOALS.md. Kept here so a run can assert against them
+  # rather than a human eyeballing the numbers afterwards.
+  gate1:
+    entity_recall:            {target: 0.85, stop: 0.70}
+    entity_f1:                {target: 0.80, stop: 0.65}
+    relation_triple_f1_strict:{target: 0.60, stop: 0.45}
+    description_faithfulness: {target: 0.95, stop: 0.90}
+    throughput_tok_s:         {target: 500,  stop: 300}
+
+logging:
+  level: info
+  write_env_json: true         # commit SHA, dirty flag, versions, GPU, CUDA
+  dump_predictions: true       # needed for error analysis; gitignored

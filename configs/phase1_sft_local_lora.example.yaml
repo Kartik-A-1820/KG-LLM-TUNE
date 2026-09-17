@@ -1,0 +1,90 @@
+# Local LoRA iteration config — 1650 Ti, 3.4 GB.
+# This is the fast-feedback loop: overfit-tiny-batch, resume tests, HP sanity,
+# 1-5k pilots. It is NOT the shipping recipe and its numbers are NOT gate numbers.
+# Real runs are full fine-tunes on Kaggle. See docs/PHASE1_GOALS.md.
+#
+# Values marked ESTIMATE are starting points, not measurements.
+
+run:
+  name: local-lora-pilot
+  seed: 1820
+  output_dir: runs/
+
+paths:
+  corpus: null
+  sft_train: null
+  sft_val: null
+  gold_set: eval/gold/v1
+  cache: data/cache
+
+model:
+  base: Qwen/Qwen3-0.6B
+  enable_thinking: false
+  # Context length is the binding constraint on this card, not parameter count.
+  # SM 7.5 has no FlashAttention-2; naive attention at seq 4096 is ~537 MB/layer.
+  # Extraction prompts are long (~1,200-token chunk + few-shot + schema), so keep
+  # this honest to the real prompt and let attention_impl carry the memory.
+  max_seq_len: 2048            # ESTIMATE — raise only after measuring headroom
+
+attention:
+  # Not optional. A silent fallback to the naive path presents as an OOM that
+  # looks like "model too big" and costs a day of chasing the wrong thing.
+  impl: sdpa                   # or: xformers
+  sdpa_backend: mem_efficient
+  assert_active: true          # fail the run if the chosen backend isn't in use
+
+train:
+  strategy: lora               # plain LoRA, not QLoRA
+  # QLoRA saves ~540 MB on a 0.72 GB base and costs dequant overhead every
+  # forward pass. Not worth it below ~7B, where base weights stop dominating.
+  quantization: none
+  lora:
+    r: 16                      # ESTIMATE
+    alpha: 32                  # ESTIMATE
+    dropout: 0.05
+    target_modules: [q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj]
+  precision: fp16              # SM 7.5 — no bf16 here either
+  grad_scaler: true
+  epochs: 1
+  lr: 2.0e-4                   # ESTIMATE — LoRA tolerates a higher LR than full FT
+  lr_schedule: cosine
+  warmup_ratio: 0.03
+  per_device_batch_size: 1     # ESTIMATE — 3.4 GB; grad accum carries effective size
+  grad_accum_steps: 16
+  gradient_checkpointing: true
+  max_grad_norm: 1.0
+  max_examples: 5000           # pilot subset; null for the full set
+
+checkpoint:
+  # Exercise the resume path HERE, not on Kaggle. Kill a short run, resume it,
+  # confirm loss continues rather than restarting.
+  every_n_steps: 50
+  keep_last: 2
+  save_optimizer: true
+  save_scheduler: true
+  save_rng_state: true
+  resume_from: null
+
+decode:
+  backend: xgrammar
+  grammar_dir: grammar/
+  description_overlap_min: 0.7  # ESTIMATE
+  temperature: 0.0
+  max_new_tokens: 512
+
+eval:
+  gold_version: v1
+  batch_size: 4
+  # Local LoRA results are diagnostic only. Do not report them against the
+  # Gate 1 thresholds — gate numbers come from the Kaggle full fine-tune.
+  assert_gates: false
+
+logging:
+  level: debug
+  write_env_json: true
+  dump_predictions: true
+
+sanity:
+  # The cheapest bug detector available. If loss does not collapse to near zero
+  # on 20 examples, the loop is broken and no amount of data will fix it.
+  overfit_n_examples: 20
