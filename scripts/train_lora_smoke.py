@@ -1,4 +1,6 @@
 import argparse
+import hashlib
+import importlib.metadata
 import json
 import platform
 import subprocess
@@ -8,9 +10,9 @@ from typing import Any
 
 import torch
 import yaml
-from peft import LoraConfig, get_peft_model
+from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 from torch.utils.data import DataLoader
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
 
 def parse_args() -> argparse.Namespace:
@@ -18,6 +20,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--model", default="HuggingFaceTB/SmolLM2-360M-Instruct")
     parser.add_argument("--train-jsonl", required=True)
     parser.add_argument("--val-jsonl", required=True)
+    parser.add_argument("--source-dataset", default=None)
+    parser.add_argument("--source-license", default=None)
     parser.add_argument("--output-dir", required=True)
     parser.add_argument("--epochs", type=int, default=2)
     parser.add_argument("--max-train-examples", type=int, default=32)
@@ -30,6 +34,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--lora-r", type=int, default=8)
     parser.add_argument("--lora-alpha", type=int, default=16)
     parser.add_argument("--lora-dropout", type=float, default=0.05)
+    parser.add_argument("--qlora", action="store_true")
+    parser.add_argument("--bnb-4bit-quant-type", default="nf4")
+    parser.add_argument("--bnb-4bit-use-double-quant", action="store_true")
     parser.add_argument("--save-adapter", action="store_true")
     return parser.parse_args()
 
@@ -43,6 +50,14 @@ def read_jsonl(path: Path, limit: int) -> list[dict[str, Any]]:
             if len(rows) >= limit:
                 break
     return rows
+
+
+def sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def prompt_text(row: dict[str, Any]) -> str:
@@ -119,11 +134,18 @@ def env_info() -> dict[str, Any]:
     free = total = None
     if cuda:
         free, total = torch.cuda.mem_get_info()
+    packages = {}
+    for package in ["transformers", "peft", "accelerate", "bitsandbytes", "trl"]:
+        try:
+            packages[package] = importlib.metadata.version(package)
+        except importlib.metadata.PackageNotFoundError:
+            packages[package] = None
     return {
         "commit_sha": git_value(["rev-parse", "HEAD"]),
         "dirty_tree": bool(git_value(["status", "--short"])),
         "python": platform.python_version(),
         "torch": torch.__version__,
+        "packages": packages,
         "cuda_available": cuda,
         "cuda": torch.version.cuda,
         "gpu": torch.cuda.get_device_name(0) if cuda else None,
@@ -136,6 +158,25 @@ def write_json(path: Path, value: dict[str, Any]) -> None:
     path.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
+def append_log(output_dir: Path, message: str) -> None:
+    with (output_dir / "log.txt").open("a", encoding="utf-8") as handle:
+        handle.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} {message}\n")
+
+
+def count_parameters(model: Any) -> dict[str, int]:
+    total = 0
+    trainable = 0
+    for parameter in model.parameters():
+        count = parameter.numel()
+        total += count
+        if parameter.requires_grad:
+            trainable += count
+    return {
+        "parameter_count": total,
+        "trainable_parameter_count": trainable,
+    }
+
+
 def main() -> None:
     args = parse_args()
     if not torch.cuda.is_available():
@@ -145,21 +186,27 @@ def main() -> None:
     device = torch.device("cuda")
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
+    append_log(output_dir, "run started")
+    environment = env_info()
 
     config_record = vars(args).copy()
-    config_record["note"] = "Diagnostic local LoRA smoke only. Not a gate metric."
+    config_record["note"] = "Diagnostic local QLoRA/LoRA smoke only. Not a gate metric."
     (output_dir / "config.yaml").write_text(
         yaml.safe_dump(config_record, sort_keys=True),
         encoding="utf-8",
     )
-    write_json(output_dir / "env.json", env_info())
+    write_json(output_dir / "env.json", environment)
 
+    append_log(output_dir, f"loading tokenizer {args.model}")
     tokenizer = AutoTokenizer.from_pretrained(args.model)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
-    train_rows = read_jsonl(Path(args.train_jsonl), args.max_train_examples)
-    val_rows = read_jsonl(Path(args.val_jsonl), args.max_val_examples)
+    append_log(output_dir, "reading data")
+    train_path = Path(args.train_jsonl)
+    val_path = Path(args.val_jsonl)
+    train_rows = read_jsonl(train_path, args.max_train_examples)
+    val_rows = read_jsonl(val_path, args.max_val_examples)
     train_data = [encode_row(tokenizer, row, args.max_length) for row in train_rows]
     val_data = [encode_row(tokenizer, row, args.max_length) for row in val_rows]
 
@@ -176,13 +223,29 @@ def main() -> None:
         collate_fn=lambda batch: collate(batch, tokenizer.pad_token_id),
     )
 
-    model = AutoModelForCausalLM.from_pretrained(
-        args.model,
-        dtype=torch.float16,
-        low_cpu_mem_usage=True,
-    )
+    append_log(output_dir, f"loading model qlora={args.qlora}")
+    quantization_config = None
+    model_kwargs: dict[str, Any] = {
+        "low_cpu_mem_usage": True,
+    }
+    if args.qlora:
+        quantization_config = BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_quant_type=args.bnb_4bit_quant_type,
+            bnb_4bit_use_double_quant=args.bnb_4bit_use_double_quant,
+            bnb_4bit_compute_dtype=torch.float16,
+        )
+        model_kwargs["quantization_config"] = quantization_config
+        model_kwargs["device_map"] = {"": 0}
+    else:
+        model_kwargs["dtype"] = torch.float16
+
+    model = AutoModelForCausalLM.from_pretrained(args.model, **model_kwargs)
     model.config.use_cache = False
-    model.gradient_checkpointing_enable()
+    if args.qlora:
+        model = prepare_model_for_kbit_training(model, use_gradient_checkpointing=True)
+    else:
+        model.gradient_checkpointing_enable()
 
     lora_config = LoraConfig(
         r=args.lora_r,
@@ -193,16 +256,26 @@ def main() -> None:
         target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"],
     )
     model = get_peft_model(model, lora_config)
-    model.to(device)
+    if not args.qlora:
+        model.to(device)
     model.train()
+    param_counts = count_parameters(model)
+    append_log(output_dir, f"trainable params {param_counts['trainable_parameter_count']}")
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr)
     scaler = torch.amp.GradScaler("cuda")
 
     metrics: dict[str, Any] = {
         "status": "running",
-        "note": "Diagnostic local LoRA smoke only. Not a gate metric.",
+        "note": "Diagnostic local QLoRA/LoRA smoke only. Not a gate metric.",
         "model": args.model,
+        "source_dataset": args.source_dataset,
+        "source_license": args.source_license,
+        "source_train_sha256": sha256_file(train_path),
+        "source_val_sha256": sha256_file(val_path),
+        "training_mode": "qlora" if args.qlora else "lora",
+        "bnb_4bit_quant_type": args.bnb_4bit_quant_type if args.qlora else None,
+        "bnb_4bit_use_double_quant": args.bnb_4bit_use_double_quant if args.qlora else None,
         "seed": args.seed,
         "train_examples": len(train_data),
         "val_examples": len(val_data),
@@ -210,17 +283,24 @@ def main() -> None:
         "batch_size": args.batch_size,
         "grad_accum_steps": args.grad_accum_steps,
         "lora_r": args.lora_r,
+        "lora_alpha": args.lora_alpha,
+        **param_counts,
         "losses": [],
     }
     start = time.time()
+    torch.cuda.reset_peak_memory_stats()
+    append_log(output_dir, "evaluating initial validation loss")
     initial_val = evaluate(model, val_loader, device)
     metrics["initial_val_loss"] = initial_val
 
     step = 0
+    train_input_tokens_seen = 0
     for epoch in range(args.epochs):
         train_losses = []
         optimizer.zero_grad(set_to_none=True)
+        append_log(output_dir, f"epoch {epoch + 1} started")
         for batch_idx, batch in enumerate(train_loader):
+            train_input_tokens_seen += int(batch["attention_mask"].sum().item())
             batch = {key: value.to(device) for key, value in batch.items()}
             with torch.autocast(device_type="cuda", dtype=torch.float16):
                 loss = model(**batch).loss / args.grad_accum_steps
@@ -241,15 +321,23 @@ def main() -> None:
             "train_loss": sum(train_losses) / max(len(train_losses), 1),
             "val_loss": val_loss,
         })
+        append_log(output_dir, f"epoch {epoch + 1} val_loss {val_loss}")
         write_json(output_dir / "metrics.json", metrics)
 
     final_val = metrics["losses"][-1]["val_loss"] if metrics["losses"] else initial_val
+    elapsed = time.time() - start
     metrics["status"] = "complete"
     metrics["final_val_loss"] = final_val
     metrics["val_loss_delta"] = final_val - initial_val
-    metrics["elapsed_seconds"] = round(time.time() - start, 3)
+    metrics["elapsed_seconds"] = round(elapsed, 3)
+    metrics["train_input_tokens_seen"] = train_input_tokens_seen
+    metrics["train_input_tokens_per_second_wall"] = round(train_input_tokens_seen / max(elapsed, 1e-9), 3)
     if torch.cuda.is_available():
         metrics["cuda_max_memory_allocated_bytes"] = torch.cuda.max_memory_allocated()
+        metrics["cuda_max_memory_reserved_bytes"] = torch.cuda.max_memory_reserved()
+        free, total = torch.cuda.mem_get_info()
+        metrics["cuda_mem_free_bytes_at_end"] = free
+        metrics["cuda_mem_total_bytes_at_end"] = total
 
     if args.save_adapter:
         adapter_dir = output_dir / "adapter"
@@ -257,6 +345,7 @@ def main() -> None:
         tokenizer.save_pretrained(adapter_dir)
 
     write_json(output_dir / "metrics.json", metrics)
+    append_log(output_dir, "run complete")
     print(json.dumps(metrics, indent=2, sort_keys=True))
 
 

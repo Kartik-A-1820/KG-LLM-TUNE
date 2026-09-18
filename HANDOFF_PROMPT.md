@@ -175,9 +175,9 @@ Read `AGENTS.md` in full. The condensed version:
 
 **Phase 1, pre-Gate-0.** Scaffold plus local smoke plumbing.
 
-Done: repo created, full document scaffold written (README, AGENTS.md, `docs/PHASE1_GOALS.md`, `docs/ARCHITECTURE.md`, `docs/DATA_STRATEGY.md`, `docs/BLOCKERS.md`, `docs/BENCHMARKING_PROTOCOL.md`, `docs/RUN_LEDGER.md`), directory structure with purpose READMEs, `.gitignore`, example configs for both the Kaggle full-FT run and the local LoRA run, DocRED open-data format-bootstrap pull, repo-local venv on `D:`, and one tiny SmolLM2-360M local LoRA smoke run.
+Done: repo created, full document scaffold written (README, AGENTS.md, `docs/PHASE1_GOALS.md`, `docs/ARCHITECTURE.md`, `docs/DATA_STRATEGY.md`, `docs/BLOCKERS.md`, `docs/BENCHMARKING_PROTOCOL.md`, `docs/RUN_LEDGER.md`), directory structure with purpose READMEs, `.gitignore`, example configs for both the Kaggle full-FT run and the local LoRA run, DocRED open-data format-bootstrap pull, repo-local venv on `D:`, one tiny SmolLM2-360M local LoRA smoke run, and one tiny QLoRA rank sweep over r=8, r=16, and r=32.
 
-Committed run evidence: `runs/20260918-080000-smollm2-docred-lora-smoke/metrics.json` and `runs/20260918-080000-smollm2-docred-lora-smoke/env.json`. This is diagnostic only, not a gate metric. It used DocRED format-bootstrap data, not the target GraphRAG SFT mix.
+Committed run evidence: `runs/20260918-080000-smollm2-docred-lora-smoke/metrics.json`, `runs/20260918-203600-smollm2-docred-qlora-r8/metrics.json`, `runs/20260918-203700-smollm2-docred-qlora-r16/metrics.json`, and `runs/20260918-203800-smollm2-docred-qlora-r32/metrics.json`. These are diagnostic only, not gate metrics. They used DocRED format-bootstrap data, not the target GraphRAG SFT mix. The provisional next local QLoRA rank is r=32 per `docs/RUN_LEDGER.md`, but it must be re-tested at the intended GraphRAG context length before longer pilots.
 
 Not done: no gold set, no Gate 0 baseline, no Qwen3 side-by-side pilot, no GraphRAG-specific SFT mixture, no Kaggle full fine-tune, and no gate metric.
 

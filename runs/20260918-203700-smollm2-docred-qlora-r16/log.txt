@@ -1,0 +1,11 @@
+2026-09-18 20:38:50 run started
+2026-09-18 20:38:50 loading tokenizer HuggingFaceTB/SmolLM2-360M-Instruct
+2026-09-18 20:38:52 reading data
+2026-09-18 20:38:52 loading model qlora=True
+2026-09-18 20:38:54 trainable params 8683520
+2026-09-18 20:38:54 evaluating initial validation loss
+2026-09-18 20:38:57 epoch 1 started
+2026-09-18 20:39:41 epoch 1 val_loss 0.807173416018486
+2026-09-18 20:39:41 epoch 2 started
+2026-09-18 20:40:25 epoch 2 val_loss 0.7679710239171982
+2026-09-18 20:40:25 run complete

@@ -84,7 +84,7 @@ Mitigation is mandatory, not optional:
 
 Phase 1, pre-Gate-0. Scaffold plus local smoke plumbing.
 
-Done: repo scaffold, local venv on `D:`, DocRED open-data format-bootstrap pull, and one tiny SmolLM2-360M local LoRA smoke run. The smoke run shows local CUDA training and loss movement on a 16-train / 4-val diagnostic subset; the recorded values live in [`runs/20260918-080000-smollm2-docred-lora-smoke/metrics.json`](runs/20260918-080000-smollm2-docred-lora-smoke/metrics.json) and [`runs/20260918-080000-smollm2-docred-lora-smoke/env.json`](runs/20260918-080000-smollm2-docred-lora-smoke/env.json).
+Done: repo scaffold, local venv on `D:`, DocRED open-data format-bootstrap pull, one tiny SmolLM2-360M local LoRA smoke run, and one tiny QLoRA rank sweep over r=8, r=16, and r=32. The smoke run shows local CUDA training and loss movement on a 16-train / 4-val diagnostic subset; the recorded values live in [`runs/20260918-080000-smollm2-docred-lora-smoke/metrics.json`](runs/20260918-080000-smollm2-docred-lora-smoke/metrics.json) and [`runs/20260918-080000-smollm2-docred-lora-smoke/env.json`](runs/20260918-080000-smollm2-docred-lora-smoke/env.json). The QLoRA rank sweep is indexed in [`docs/RUN_LEDGER.md`](docs/RUN_LEDGER.md).
 
 Not done: no gold set, no Gate 0 baseline, no Qwen3 side-by-side pilot, no GraphRAG-specific SFT mixture, no Kaggle full fine-tune, and no gate metric.
 
