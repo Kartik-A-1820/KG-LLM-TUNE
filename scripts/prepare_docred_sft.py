@@ -18,6 +18,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-val", type=int, default=100)
     parser.add_argument("--seed", type=int, default=1820)
     parser.add_argument("--source-cache", default=None)
+    parser.add_argument(
+        "--train-source-file",
+        default="train_annotated.json.gz",
+        choices=["train_annotated.json.gz", "train_distant.json.gz"],
+    )
     return parser.parse_args()
 
 
@@ -144,7 +149,7 @@ def main() -> None:
     cache_dir = Path(args.source_cache) if args.source_cache else output_dir / "source"
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    train_source = fetch("train_annotated.json.gz", cache_dir)
+    train_source = fetch(args.train_source_file, cache_dir)
     val_source = fetch("dev.json.gz", cache_dir)
 
     train_raw = read_gzip_json(train_source)
@@ -163,6 +168,7 @@ def main() -> None:
         "source_url": "https://huggingface.co/datasets/thunlp/docred",
         "license": "mit",
         "seed": args.seed,
+        "train_source_file": args.train_source_file,
         "raw_train_examples": len(train_raw),
         "raw_val_examples": len(val_raw),
         "converted_train_examples": len(train_rows),

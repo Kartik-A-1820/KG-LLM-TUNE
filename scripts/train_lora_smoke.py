@@ -37,6 +37,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--qlora", action="store_true")
     parser.add_argument("--bnb-4bit-quant-type", default="nf4")
     parser.add_argument("--bnb-4bit-use-double-quant", action="store_true")
+    parser.add_argument("--log-every-steps", type=int, default=10)
     parser.add_argument("--save-adapter", action="store_true")
     return parser.parse_args()
 
@@ -290,61 +291,83 @@ def main() -> None:
     start = time.time()
     torch.cuda.reset_peak_memory_stats()
     append_log(output_dir, "evaluating initial validation loss")
-    initial_val = evaluate(model, val_loader, device)
-    metrics["initial_val_loss"] = initial_val
-
-    step = 0
     train_input_tokens_seen = 0
-    for epoch in range(args.epochs):
-        train_losses = []
-        optimizer.zero_grad(set_to_none=True)
-        append_log(output_dir, f"epoch {epoch + 1} started")
-        for batch_idx, batch in enumerate(train_loader):
-            train_input_tokens_seen += int(batch["attention_mask"].sum().item())
-            batch = {key: value.to(device) for key, value in batch.items()}
-            with torch.autocast(device_type="cuda", dtype=torch.float16):
-                loss = model(**batch).loss / args.grad_accum_steps
-            scaler.scale(loss).backward()
-            train_losses.append(float((loss * args.grad_accum_steps).detach().cpu()))
+    try:
+        initial_val = evaluate(model, val_loader, device)
+        metrics["initial_val_loss"] = initial_val
 
-            should_step = (batch_idx + 1) % args.grad_accum_steps == 0 or batch_idx + 1 == len(train_loader)
-            if should_step:
-                scaler.step(optimizer)
-                scaler.update()
-                optimizer.zero_grad(set_to_none=True)
-                step += 1
+        step = 0
+        for epoch in range(args.epochs):
+            train_losses = []
+            optimizer.zero_grad(set_to_none=True)
+            append_log(output_dir, f"epoch {epoch + 1} started")
+            for batch_idx, batch in enumerate(train_loader):
+                train_input_tokens_seen += int(batch["attention_mask"].sum().item())
+                batch = {key: value.to(device) for key, value in batch.items()}
+                with torch.autocast(device_type="cuda", dtype=torch.float16):
+                    loss = model(**batch).loss / args.grad_accum_steps
+                scaler.scale(loss).backward()
+                train_losses.append(float((loss * args.grad_accum_steps).detach().cpu()))
 
-        val_loss = evaluate(model, val_loader, device)
-        metrics["losses"].append({
-            "epoch": epoch + 1,
-            "optimizer_steps": step,
-            "train_loss": sum(train_losses) / max(len(train_losses), 1),
-            "val_loss": val_loss,
-        })
-        append_log(output_dir, f"epoch {epoch + 1} val_loss {val_loss}")
+                should_step = (batch_idx + 1) % args.grad_accum_steps == 0 or batch_idx + 1 == len(train_loader)
+                if should_step:
+                    scaler.step(optimizer)
+                    scaler.update()
+                    optimizer.zero_grad(set_to_none=True)
+                    step += 1
+                    if args.log_every_steps > 0 and step % args.log_every_steps == 0:
+                        elapsed = time.time() - start
+                        metrics["optimizer_steps"] = step
+                        metrics["train_input_tokens_seen"] = train_input_tokens_seen
+                        metrics["elapsed_seconds_so_far"] = round(elapsed, 3)
+                        metrics["train_input_tokens_per_second_wall_so_far"] = round(
+                            train_input_tokens_seen / max(elapsed, 1e-9),
+                            3,
+                        )
+                        if torch.cuda.is_available():
+                            metrics["cuda_max_memory_allocated_bytes_so_far"] = torch.cuda.max_memory_allocated()
+                            metrics["cuda_max_memory_reserved_bytes_so_far"] = torch.cuda.max_memory_reserved()
+                        append_log(output_dir, f"optimizer_step {step}")
+                        write_json(output_dir / "metrics.json", metrics)
+
+            val_loss = evaluate(model, val_loader, device)
+            metrics["losses"].append({
+                "epoch": epoch + 1,
+                "optimizer_steps": step,
+                "train_loss": sum(train_losses) / max(len(train_losses), 1),
+                "val_loss": val_loss,
+            })
+            append_log(output_dir, f"epoch {epoch + 1} val_loss {val_loss}")
+            write_json(output_dir / "metrics.json", metrics)
+
+        final_val = metrics["losses"][-1]["val_loss"] if metrics["losses"] else initial_val
+        metrics["status"] = "complete"
+        metrics["final_val_loss"] = final_val
+        metrics["val_loss_delta"] = final_val - initial_val
+    except Exception as exc:
+        metrics["status"] = "failed"
+        metrics["failure_type"] = type(exc).__name__
+        metrics["failure_message"] = str(exc)
+        append_log(output_dir, f"run failed {type(exc).__name__}: {exc}")
+        raise
+    finally:
+        elapsed = time.time() - start
+        metrics["elapsed_seconds"] = round(elapsed, 3)
+        metrics["train_input_tokens_seen"] = train_input_tokens_seen
+        metrics["train_input_tokens_per_second_wall"] = round(train_input_tokens_seen / max(elapsed, 1e-9), 3)
+        if torch.cuda.is_available():
+            metrics["cuda_max_memory_allocated_bytes"] = torch.cuda.max_memory_allocated()
+            metrics["cuda_max_memory_reserved_bytes"] = torch.cuda.max_memory_reserved()
+            free, total = torch.cuda.mem_get_info()
+            metrics["cuda_mem_free_bytes_at_end"] = free
+            metrics["cuda_mem_total_bytes_at_end"] = total
         write_json(output_dir / "metrics.json", metrics)
-
-    final_val = metrics["losses"][-1]["val_loss"] if metrics["losses"] else initial_val
-    elapsed = time.time() - start
-    metrics["status"] = "complete"
-    metrics["final_val_loss"] = final_val
-    metrics["val_loss_delta"] = final_val - initial_val
-    metrics["elapsed_seconds"] = round(elapsed, 3)
-    metrics["train_input_tokens_seen"] = train_input_tokens_seen
-    metrics["train_input_tokens_per_second_wall"] = round(train_input_tokens_seen / max(elapsed, 1e-9), 3)
-    if torch.cuda.is_available():
-        metrics["cuda_max_memory_allocated_bytes"] = torch.cuda.max_memory_allocated()
-        metrics["cuda_max_memory_reserved_bytes"] = torch.cuda.max_memory_reserved()
-        free, total = torch.cuda.mem_get_info()
-        metrics["cuda_mem_free_bytes_at_end"] = free
-        metrics["cuda_mem_total_bytes_at_end"] = total
 
     if args.save_adapter:
         adapter_dir = output_dir / "adapter"
         model.save_pretrained(adapter_dir)
         tokenizer.save_pretrained(adapter_dir)
 
-    write_json(output_dir / "metrics.json", metrics)
     append_log(output_dir, "run complete")
     print(json.dumps(metrics, indent=2, sort_keys=True))
 
