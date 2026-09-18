@@ -2,15 +2,18 @@
 
 Public datasets are useful for format bootstrapping and early smoke tests. They do **not** define Phase 1 success; gates still use Kartik's hand-annotated gold set.
 
+Do not let dataset availability decide the training objective. The target is the complete GraphRAG extraction/indexing flow: entity and relationship extraction, claims/covariates, strict structured output, reference-grounded QA over supplied context, routing labels, and source-grounded summaries/descriptions. Public relation-extraction datasets cover only one slice of that.
+
 ## Recommendation for the first pilot
 
-Use **DocRED** first.
+Use **DocRED** first only as a plumbing and format-bootstrap pilot.
 
 - Source: `thunlp/docred` on Hugging Face.
 - Licence: Hugging Face tags the dataset as `mit`.
 - Shape: document-level relation extraction with entity mentions and relation labels.
 - Splits: the Hugging Face card lists `train_annotated` with 3,053 examples, `train_distant` with 101,873 examples, `validation` with 998 examples, and `test` with 1,000 examples.
 - Why first: it is small enough for a quick pilot, human annotated, document-level, and licence-cleaner than the alternatives below.
+- Limitation: it is not sufficient training data for the GraphRAG model because it does not cover reference-grounded QA, routing, claim extraction, or grounded summaries.
 
 ## Do not use yet
 

@@ -37,6 +37,9 @@ The dividing line is **extraction vs synthesis** — *not* index-time vs query-t
 - relation extraction
 - entity descriptions and relation descriptions
 - claim / covariate extraction
+- reference-grounded question answering over a supplied chunk or retrieved context
+- structured JSON output under the project schema
+- source-grounded chunk/entity/relation summaries used by extraction and indexing
 - query routing
 
 **A larger model keeps:**
@@ -46,6 +49,8 @@ The dividing line is **extraction vs synthesis** — *not* index-time vs query-t
 - final answer synthesis
 
 Why the line falls there: extraction is high-volume, schema-structured, and verifiable. Synthesis is low-volume, free-form, and unverifiable — so there is no verifier, no rejection sampling, and a much worse feedback loop for fine-tuning it. Query routing joins the small model despite being query-time because it is a short classification with a fixed label set.
+
+Training data follows this split. Do **not** train on broad available datasets merely because they exist. The SFT mixture should be built from tasks the GraphRAG extraction/indexing path actually needs: entity and relationship extraction, claims/covariates, source-grounded descriptions and summaries, strict structured output, routing labels, and reference-grounded QA where every answer is supported by the provided text. Generic public RE data such as DocRED is for format bootstrapping and smoke tests only.
 
 ## 4. Two phases
 

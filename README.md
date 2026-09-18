@@ -14,6 +14,9 @@ A GraphRAG pipeline makes many LLM calls. They are not the same kind of call.
 - relation extraction
 - entity descriptions and relation descriptions
 - claim / covariate extraction
+- reference-grounded question answering over a supplied chunk or retrieved context
+- structured JSON output under the project schema
+- source-grounded chunk/entity/relation summaries used by extraction and indexing
 - query routing (local vs global vs direct)
 
 **Stays with a larger model:**
@@ -25,6 +28,8 @@ A GraphRAG pipeline makes many LLM calls. They are not the same kind of call.
 The dividing line is **extraction vs synthesis**, not index-time vs query-time. Query routing is index-agnostic but it is a short classification, so it comes to the small model. Community reports are index-time but they are long-form abstractive writing, so they stay with the big one.
 
 This matters because extraction is the high-volume call — it is per-chunk, it is structured, and it is verifiable. Those three properties are exactly what makes it a good fine-tuning target and a bad place to spend API budget.
+
+Training data must follow that boundary. Use datasets that exercise the GraphRAG flow directly: entities, relationships, claims, source-grounded descriptions/summaries, structured output enforcement, routing labels, and reference-grounded QA where the answer must be supported by the provided context. Generic public relation-extraction data is only a smoke-test and format-bootstrap tool; it is not the main training mixture.
 
 ## Two phases
 

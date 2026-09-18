@@ -31,7 +31,19 @@ It lives in `eval/gold/` and it is **committed**, subject to the corpus-export p
 
 ## 2. Candidate public datasets
 
-Use these to bulk out the SFT mix and to pretrain the output format — **not** to define success. They are different text from a different domain with a different schema.
+Use these to test plumbing and pretrain the output format — **not** to define success and not as the main SFT mixture. They are different text from a different domain with a different schema.
+
+The real training mix must be specific to the GraphRAG extraction/indexing flow:
+
+- entity extraction
+- relation extraction
+- claim / covariate extraction
+- source-grounded entity, relation, and chunk summaries
+- strict structured JSON output under the project schema
+- query-routing labels
+- reference-grounded QA where the answer is explicitly supported by the supplied chunk or retrieved context
+
+Free-form community reports, global-search reduce, and final answer synthesis remain outside the small model unless that architecture decision is explicitly reopened. "Summarisation" in the SFT mix means **source-grounded summaries/descriptions used by indexing**, not ungrounded prose synthesis.
 
 | Dataset | Licence | Use | Note |
 | --- | --- | --- | --- |
@@ -42,13 +54,15 @@ Use these to bulk out the SFT mix and to pretrain the output format — **not** 
 
 **Licences are verified per HF repo at pull time and recorded in `data/README.md`** with the date. A licence stated in a paper is not the licence on the copy you downloaded.
 
-**Domain gap is the real caveat.** Public RE datasets are mostly Wikipedia-style encyclopedic prose with a closed relation inventory. If Kartik's corpus is technical documents, reports, or internal writing, a model tuned hard on REBEL will learn REBEL's entity taxonomy and carry it into the graph. Treat public data as **format and structure pretraining**; teacher-distilled in-domain data is what teaches the actual task.
+**Domain gap is the real caveat.** Public RE datasets are mostly Wikipedia-style encyclopedic prose with a closed relation inventory. If Kartik's corpus is technical documents, reports, or internal writing, a model tuned hard on REBEL or DocRED will learn that taxonomy and carry it into the graph. Treat public data as **format and structure pretraining**; GraphRAG-specific teacher-distilled data is what teaches the actual task.
 
 ---
 
 ## 3. Teacher distillation with multi-teacher agreement
 
 Public data teaches the shape. The teacher teaches the corpus.
+
+Teacher prompts should emit the same task families the small model will own in the pipeline: extraction, claims/covariates, grounded descriptions/summaries, routing labels, and reference-grounded QA. A teacher output that cannot be checked against the source text should not become SFT data.
 
 ### Plan
 
