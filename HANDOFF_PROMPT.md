@@ -152,7 +152,7 @@ Read `AGENTS.md` in full. The condensed version:
 
 **Reproducibility:** pinned versions; seed in the config, never a literal; every run is `script + config`; **no hard-coded paths** (not `D:\...`, not `F:\...`, not `/kaggle/input/...`); the config is *copied* into the run directory, not referenced. Every run writes `env.json` with commit SHA, dirty-tree flag, versions, GPU, CUDA.
 
-**Run tracking:** `runs/<timestamp>-<name>/` with `config.yaml`, `env.json`, `metrics.json`, `log.txt`. Failed runs are **kept** and marked failed. `metrics.json` records the gold-set version/hash it scored against. Weights are gitignored; metrics/config/env are committed.
+**Run tracking:** `runs/<timestamp>-<name>/` with `config.yaml`, `env.json`, `metrics.json`, `log.txt`. Failed runs are **kept** and marked failed. `metrics.json` records the gold-set version/hash it scored against. Weights are gitignored; metrics/config/env are committed. Every completed, failed, or aborted stage run also gets a row in `docs/RUN_LEDGER.md` in the same commit.
 
 **Notebooks:** exploration and Kaggle execution only. Training logic lives in `src/kg_llm_tune/`; the Kaggle notebook is a thin driver that clones a **pinned commit SHA**. Anything copied into a second notebook graduates to `src/`. Strip outputs. No notebook is ever the source of a benchmark number.
 
@@ -173,11 +173,13 @@ Read `AGENTS.md` in full. The condensed version:
 
 ## 9. Current status
 
-**Phase 1, pre-Gate-0.** Scaffold and planning only.
+**Phase 1, pre-Gate-0.** Scaffold plus local smoke plumbing.
 
-Done: repo created, full document scaffold written (README, AGENTS.md, `docs/PHASE1_GOALS.md`, `docs/ARCHITECTURE.md`, `docs/DATA_STRATEGY.md`, `docs/BLOCKERS.md`), directory structure with purpose READMEs, `.gitignore`, example configs for both the Kaggle full-FT run and the local LoRA run.
+Done: repo created, full document scaffold written (README, AGENTS.md, `docs/PHASE1_GOALS.md`, `docs/ARCHITECTURE.md`, `docs/DATA_STRATEGY.md`, `docs/BLOCKERS.md`, `docs/BENCHMARKING_PROTOCOL.md`, `docs/RUN_LEDGER.md`), directory structure with purpose READMEs, `.gitignore`, example configs for both the Kaggle full-FT run and the local LoRA run, DocRED open-data format-bootstrap pull, repo-local venv on `D:`, and one tiny SmolLM2-360M local LoRA smoke run.
 
-Not done: **no code written**, no training run, no models downloaded, no data collected, no gold set.
+Committed run evidence: `runs/20260918-080000-smollm2-docred-lora-smoke/metrics.json` and `runs/20260918-080000-smollm2-docred-lora-smoke/env.json`. This is diagnostic only, not a gate metric. It used DocRED format-bootstrap data, not the target GraphRAG SFT mix.
+
+Not done: no gold set, no Gate 0 baseline, no Qwen3 side-by-side pilot, no GraphRAG-specific SFT mixture, no Kaggle full fine-tune, and no gate metric.
 
 **Critical path — the gold set.** 200–500 hand-annotated examples from Kartik's own corpus, stratified for coverage, spans not just strings, with the annotation guideline written *before* annotating and a double-annotated slice to establish the noise floor. Nothing downstream can be measured until it exists. Protocol in `docs/DATA_STRATEGY.md` §1.
 

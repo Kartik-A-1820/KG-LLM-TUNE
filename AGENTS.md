@@ -40,6 +40,7 @@ A result that cannot be regenerated is not a result.
 
 - Every run gets a directory: `runs/<YYYYMMDD-HHMMSS>-<short-name>/` containing `config.yaml`, `env.json`, `metrics.json`, `log.txt`, and any predictions dumped for error analysis.
 - `metrics.json` is machine-readable and flat. It carries the metric values, the gold-set version/hash it was measured against, and the number of examples scored.
+- Every completed, failed, or aborted stage run gets a row in `docs/RUN_LEDGER.md` in the same commit as its run files. The ledger cites the run files and states the decision, next step, and caveats.
 - Local tracking is files on disk first. If a tracker (W&B, TensorBoard) is added, it is a *mirror* — the files stay authoritative, because the tracker is an account that can be lost and the files are in the repo.
 - Failed and aborted runs are kept and marked `status: failed` in `metrics.json`. Deleting failed runs is how a project accidentally reports only its lucky seeds.
 - Run directories with weights are gitignored; `metrics.json`, `config.yaml`, and `env.json` are **committed**.

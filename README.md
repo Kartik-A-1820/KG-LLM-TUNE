@@ -82,11 +82,17 @@ Mitigation is mandatory, not optional:
 
 ## Status
 
-Phase 1, pre-Gate-0. Scaffold and planning only. No training has been run, no models downloaded, no data collected.
+Phase 1, pre-Gate-0. Scaffold plus local smoke plumbing.
+
+Done: repo scaffold, local venv on `D:`, DocRED open-data format-bootstrap pull, and one tiny SmolLM2-360M local LoRA smoke run. The smoke run shows local CUDA training and loss movement on a 16-train / 4-val diagnostic subset; the recorded values live in [`runs/20260918-080000-smollm2-docred-lora-smoke/metrics.json`](runs/20260918-080000-smollm2-docred-lora-smoke/metrics.json) and [`runs/20260918-080000-smollm2-docred-lora-smoke/env.json`](runs/20260918-080000-smollm2-docred-lora-smoke/env.json).
+
+Not done: no gold set, no Gate 0 baseline, no Qwen3 side-by-side pilot, no GraphRAG-specific SFT mixture, no Kaggle full fine-tune, and no gate metric.
 
 The immediate critical path is the **gold set** — 200–500 hand-annotated examples from Kartik's own corpus. Everything else in Phase 1 is measured against it, so nothing downstream can start until it exists. See [`docs/DATA_STRATEGY.md`](docs/DATA_STRATEGY.md).
 
 Known blockers are tracked in [`docs/BLOCKERS.md`](docs/BLOCKERS.md) rather than left implicit. Two of them are policy questions only Kartik can answer.
+
+Benchmark process and committed run evidence are tracked in [`docs/BENCHMARKING_PROTOCOL.md`](docs/BENCHMARKING_PROTOCOL.md) and [`docs/RUN_LEDGER.md`](docs/RUN_LEDGER.md).
 
 ## Getting started
 
