@@ -2,6 +2,7 @@ import argparse
 import hashlib
 import importlib.metadata
 import json
+import math
 import platform
 import subprocess
 import time
@@ -156,7 +157,7 @@ def env_info() -> dict[str, Any]:
 
 
 def write_json(path: Path, value: dict[str, Any]) -> None:
-    path.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    path.write_text(json.dumps(value, allow_nan=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
 def append_log(output_dir: Path, message: str) -> None:
@@ -185,10 +186,10 @@ def main() -> None:
 
     torch.manual_seed(args.seed)
     device = torch.device("cuda")
+    environment = env_info()
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     append_log(output_dir, "run started")
-    environment = env_info()
 
     config_record = vars(args).copy()
     config_record["note"] = "Diagnostic local QLoRA/LoRA smoke only. Not a gate metric."
@@ -306,8 +307,13 @@ def main() -> None:
                 batch = {key: value.to(device) for key, value in batch.items()}
                 with torch.autocast(device_type="cuda", dtype=torch.float16):
                     loss = model(**batch).loss / args.grad_accum_steps
+                if not torch.isfinite(loss):
+                    raise FloatingPointError(f"non-finite loss at epoch {epoch + 1}, batch {batch_idx + 1}")
                 scaler.scale(loss).backward()
-                train_losses.append(float((loss * args.grad_accum_steps).detach().cpu()))
+                train_loss = float((loss * args.grad_accum_steps).detach().cpu())
+                if not math.isfinite(train_loss):
+                    raise FloatingPointError(f"non-finite train loss at epoch {epoch + 1}, batch {batch_idx + 1}")
+                train_losses.append(train_loss)
 
                 should_step = (batch_idx + 1) % args.grad_accum_steps == 0 or batch_idx + 1 == len(train_loader)
                 if should_step:

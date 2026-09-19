@@ -1,0 +1,23 @@
+batch_size: 1
+bnb_4bit_quant_type: nf4
+bnb_4bit_use_double_quant: true
+epochs: 1
+grad_accum_steps: 8
+log_every_steps: 25
+lora_alpha: 16
+lora_dropout: 0.05
+lora_r: 8
+lr: 0.0002
+max_length: 384
+max_train_examples: 5000
+max_val_examples: 500
+model: HuggingFaceTB/SmolLM2-360M-Instruct
+note: Diagnostic local QLoRA/LoRA smoke only. Not a gate metric.
+output_dir: runs\20260918-210000-smollm2-docred5k-qlora-r8
+qlora: true
+save_adapter: false
+seed: 1820
+source_dataset: thunlp/docred-train_distant-5k
+source_license: mit
+train_jsonl: data\open_pilots\docred_sft_5k_distant_v1\train.jsonl
+val_jsonl: data\open_pilots\docred_sft_5k_distant_v1\val.jsonl

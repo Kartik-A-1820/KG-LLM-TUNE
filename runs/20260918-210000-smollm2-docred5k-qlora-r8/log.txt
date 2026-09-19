@@ -1,0 +1,34 @@
+2026-09-18 20:49:58 run started
+2026-09-18 20:49:58 loading tokenizer HuggingFaceTB/SmolLM2-360M-Instruct
+2026-09-18 20:50:00 reading data
+2026-09-18 20:50:12 loading model qlora=True
+2026-09-18 20:50:14 trainable params 4341760
+2026-09-18 20:50:14 evaluating initial validation loss
+2026-09-18 20:56:08 epoch 1 started
+2026-09-18 21:04:43 optimizer_step 25
+2026-09-18 21:13:17 optimizer_step 50
+2026-09-18 21:21:52 optimizer_step 75
+2026-09-18 21:30:26 optimizer_step 100
+2026-09-18 21:39:00 optimizer_step 125
+2026-09-18 21:47:35 optimizer_step 150
+2026-09-18 21:56:09 optimizer_step 175
+2026-09-18 22:04:43 optimizer_step 200
+2026-09-18 22:13:17 optimizer_step 225
+2026-09-18 22:21:52 optimizer_step 250
+2026-09-18 22:30:26 optimizer_step 275
+2026-09-18 22:39:00 optimizer_step 300
+2026-09-18 22:47:34 optimizer_step 325
+2026-09-18 22:56:09 optimizer_step 350
+2026-09-18 23:04:43 optimizer_step 375
+2026-09-18 23:13:17 optimizer_step 400
+2026-09-18 23:21:51 optimizer_step 425
+2026-09-18 23:30:26 optimizer_step 450
+2026-09-18 23:39:00 optimizer_step 475
+2026-09-18 23:47:34 optimizer_step 500
+2026-09-18 23:56:09 optimizer_step 525
+2026-09-19 00:04:43 optimizer_step 550
+2026-09-19 00:13:17 optimizer_step 575
+2026-09-19 00:21:51 optimizer_step 600
+2026-09-19 00:30:26 optimizer_step 625
+2026-09-19 00:36:21 epoch 1 val_loss 0.3484197201728821
+2026-09-19 00:36:21 run complete
