@@ -15,6 +15,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
 RELATION_LABELS = [
     "worked_with",
+    "developed",
     "wrote_algorithm_for",
     "wrote_notes_in",
     "based_in",
@@ -48,6 +49,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--bnb-4bit-quant-type", default="nf4")
     parser.add_argument("--bnb-4bit-use-double-quant", action="store_true")
     parser.add_argument("--attn-implementation", default="sdpa")
+    parser.add_argument("--prompt-style", choices=["plain", "chat"], default="plain")
+    parser.add_argument("--include-one-shot", action="store_true")
+    parser.add_argument("--repetition-penalty", type=float, default=1.0)
+    parser.add_argument("--no-repeat-ngram-size", type=int, default=0)
     return parser.parse_args()
 
 
@@ -103,25 +108,83 @@ def read_jsonl(path: Path, limit: int) -> list[dict[str, Any]]:
     return rows
 
 
-def prompt_for(passage: str) -> str:
+def instruction_text(passage: str, include_one_shot: bool) -> str:
     labels = ", ".join(RELATION_LABELS)
+    one_shot = ""
+    if include_one_shot:
+        one_shot = (
+            "Example passage:\n"
+            "Grace Hopper developed COBOL with colleagues at CODASYL.\n"
+            "Example JSON:\n"
+            "{\"entities\":[{\"id\":\"e0\",\"name\":\"Grace Hopper\",\"type\":\"person\",\"description\":\"Grace Hopper\"},"
+            "{\"id\":\"e1\",\"name\":\"COBOL\",\"type\":\"technology\",\"description\":\"COBOL\"},"
+            "{\"id\":\"e2\",\"name\":\"CODASYL\",\"type\":\"organization\",\"description\":\"CODASYL\"}],"
+            "\"relations\":[{\"head\":\"e0\",\"tail\":\"e1\",\"type\":\"developed\",\"description\":\"Grace Hopper developed COBOL\"},"
+            "{\"head\":\"e0\",\"tail\":\"e2\",\"type\":\"worked_with\",\"description\":\"Grace Hopper worked with colleagues at CODASYL\"}],"
+            "\"claims\":[]}\n\n"
+        )
     return (
         "You extract a knowledge graph from a passage.\n"
-        "Return only valid JSON with exactly these top-level keys: entities, relations, claims.\n"
+        "Return one compact valid JSON object and nothing after it.\n"
+        "The JSON must have exactly these top-level keys: entities, relations, claims.\n"
         "Entity objects must have id, name, type, description.\n"
         "Relation objects must have head, tail, type, description. Use entity ids for head and tail.\n"
         f"Allowed relation type values: {labels}.\n"
-        "Only include relations directly supported by the passage. Do not add explanations.\n\n"
+        "Only include relations directly supported by the passage.\n"
+        "Use no more than 8 entities and no more than 8 relations.\n\n"
+        f"{one_shot}"
         f"Passage:\n{passage}\n\nJSON:\n"
     )
+
+
+def prompt_for(tokenizer: Any, passage: str, prompt_style: str, include_one_shot: bool) -> str:
+    instruction = instruction_text(passage, include_one_shot)
+    if prompt_style == "chat" and getattr(tokenizer, "chat_template", None):
+        return tokenizer.apply_chat_template(
+            [{"role": "user", "content": instruction}],
+            tokenize=False,
+            add_generation_prompt=True,
+        )
+    return instruction
+
+
+def first_json_object(text: str) -> str | None:
+    start = text.find("{")
+    if start < 0:
+        return None
+    depth = 0
+    in_string = False
+    escaped = False
+    for idx in range(start, len(text)):
+        char = text[idx]
+        if in_string:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == "\"":
+                in_string = False
+            continue
+        if char == "\"":
+            in_string = True
+        elif char == "{":
+            depth += 1
+        elif char == "}":
+            depth -= 1
+            if depth == 0:
+                return text[start:idx + 1]
+    return None
 
 
 def extract_json(text: str) -> tuple[dict[str, Any] | None, str | None]:
     stripped = text.strip()
     candidates = [stripped]
+    first = first_json_object(stripped)
+    if first:
+        candidates.insert(0, first)
     match = re.search(r"\{.*\}", stripped, flags=re.DOTALL)
     if match:
-        candidates.insert(0, match.group(0))
+        candidates.append(match.group(0))
     for candidate in candidates:
         try:
             value = json.loads(candidate)
@@ -224,6 +287,10 @@ def main() -> None:
         "max_new_tokens": args.max_new_tokens,
         "load_in_4bit": args.load_in_4bit,
         "attn_implementation_requested": args.attn_implementation,
+        "prompt_style": args.prompt_style,
+        "include_one_shot": args.include_one_shot,
+        "repetition_penalty": args.repetition_penalty,
+        "no_repeat_ngram_size": args.no_repeat_ngram_size,
     }
 
     try:
@@ -264,7 +331,7 @@ def main() -> None:
         with predictions_path.open("w", encoding="utf-8", newline="\n") as pred_handle:
             for idx, example in enumerate(examples, start=1):
                 append_log(output_dir, f"example {idx} started")
-                prompt = prompt_for(example["passage"])
+                prompt = prompt_for(tokenizer, example["passage"], args.prompt_style, args.include_one_shot)
                 inputs = tokenizer(
                     prompt,
                     return_tensors="pt",
@@ -277,6 +344,8 @@ def main() -> None:
                         **inputs,
                         max_new_tokens=args.max_new_tokens,
                         do_sample=False,
+                        repetition_penalty=args.repetition_penalty,
+                        no_repeat_ngram_size=args.no_repeat_ngram_size,
                         pad_token_id=tokenizer.pad_token_id,
                         eos_token_id=tokenizer.eos_token_id,
                     )
