@@ -1,0 +1,15 @@
+attn_implementation: sdpa
+batch_size: 1
+bnb_4bit_quant_type: nf4
+bnb_4bit_use_double_quant: true
+lora_alpha: 32
+lora_dropout: 0.05
+lora_r: 16
+lr: 0.0002
+max_length: 4096
+model: HuggingFaceTB/SmolLM2-360M-Instruct
+note: Synthetic local context memory probe only. Not a quality or gate metric.
+output_dir: runs\20260919-ctx4096-smollm2-qlora-r16-probe
+qlora: true
+seed: 1820
+supervised_tail_tokens: 512
