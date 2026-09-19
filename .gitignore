@@ -44,6 +44,8 @@ runs/*/**
 !runs/*/metrics.json
 !runs/*/config.yaml
 !runs/*/env.json
+!runs/*/log.txt
+runs/tmp-*/
 
 # Datasets and caches
 *.arrow
@@ -51,6 +53,8 @@ runs/*/**
 *.jsonl.gz
 .cache/
 .hf_cache/
+.hf-home/
+.pip-cache/
 huggingface/
 
 # Credentials — never commit these

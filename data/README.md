@@ -25,7 +25,8 @@ Every dataset used gets a row. A dataset with no row is not used. Fill in at pul
 
 | Dataset | Source URL | Licence | Date pulled | SHA | Used for |
 | --- | --- | --- | --- | --- | --- |
-| *(none yet)* | | | | | |
+| `thunlp/docred` | https://huggingface.co/datasets/thunlp/docred | MIT, per Hugging Face dataset tag | 2026-09-18 | train source `0d01cd07cabd7f9077db6ea8628832cf60281b4228ec1ba54647f836a3b17d02`; val source `6ae4d7f5b0b9d2cbe74b9634ed43b35b7cb5b7c0dc3a16226dbe343139a4ae05` in `runs/20260918-080000-smollm2-docred-lora-smoke/metrics.json` | Open-data SFT smoke / format bootstrap only; not a gate metric |
+| `thunlp/docred` distant split | https://huggingface.co/datasets/thunlp/docred | MIT, per Hugging Face dataset tag | 2026-09-18 | train distant source `c420c0429310583cfc9459f7daa26b1f4c11ff5c7a1481aa64ab9db2b296b905`; val source `6ae4d7f5b0b9d2cbe74b9634ed43b35b7cb5b7c0dc3a16226dbe343139a4ae05` in `data/open_pilots/docred_sft_5k_distant_v1/manifest.json` | 5k local QLoRA rank speed/VRAM benchmark only; distantly supervised and not a gate metric |
 
 Licence is verified against the actual copy downloaded, not against the paper.
 

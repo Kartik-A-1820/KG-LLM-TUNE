@@ -1,0 +1,46 @@
+{
+  "batch_size": 1,
+  "bnb_4bit_quant_type": "nf4",
+  "bnb_4bit_use_double_quant": true,
+  "cuda_max_memory_allocated_bytes": 877598720,
+  "cuda_max_memory_reserved_bytes": 966787072,
+  "cuda_mem_free_bytes_at_end": 2458648576,
+  "cuda_mem_total_bytes_at_end": 4294639616,
+  "elapsed_seconds": 91.418,
+  "final_val_loss": 0.7679710239171982,
+  "grad_accum_steps": 8,
+  "initial_val_loss": 0.8445938229560852,
+  "lora_alpha": 32,
+  "lora_r": 16,
+  "losses": [
+    {
+      "epoch": 1,
+      "optimizer_steps": 2,
+      "train_loss": 0.875104583799839,
+      "val_loss": 0.807173416018486
+    },
+    {
+      "epoch": 2,
+      "optimizer_steps": 4,
+      "train_loss": 0.8195480331778526,
+      "val_loss": 0.7679710239171982
+    }
+  ],
+  "max_length": 384,
+  "model": "HuggingFaceTB/SmolLM2-360M-Instruct",
+  "note": "Diagnostic local QLoRA/LoRA smoke only. Not a gate metric.",
+  "parameter_count": 213218240,
+  "seed": 1820,
+  "source_dataset": "thunlp/docred",
+  "source_license": "mit",
+  "source_train_sha256": "bdeab4fcc666c01b0991d9dc1d96631f408b655c33a3904dcb727f8e972428e6",
+  "source_val_sha256": "a264d1033a29d4d2e73c45a97c446ee7c30656c38a6b85d014798b78c2dd396d",
+  "status": "complete",
+  "train_examples": 16,
+  "train_input_tokens_per_second_wall": 134.415,
+  "train_input_tokens_seen": 12288,
+  "trainable_parameter_count": 8683520,
+  "training_mode": "qlora",
+  "val_examples": 4,
+  "val_loss_delta": -0.07662279903888702
+}

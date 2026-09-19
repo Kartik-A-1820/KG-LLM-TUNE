@@ -1,8 +1,12 @@
 # KG-LLM-TUNE
 
-**Fine-tune a sub-1B model to own the extraction path of a GraphRAG pipeline, so that indexing runs locally at speed instead of costing a large-model API call per chunk.**
+**Fine-tune SmolLM2-360M-Instruct to own the extraction path of a GraphRAG pipeline, so that indexing runs locally at speed instead of costing a large-model API call per chunk.**
 
 That is the whole point of this repo. Everything below is detail.
+
+**Chosen model:** `HuggingFaceTB/SmolLM2-360M-Instruct`.
+
+SmolLM2-360M is the primary model for this project. Qwen models are not the chosen model; they appear only as benchmark comparisons or fallbacks to de-risk the SmolLM-first plan.
 
 ## The split: extraction vs synthesis
 
@@ -14,6 +18,9 @@ A GraphRAG pipeline makes many LLM calls. They are not the same kind of call.
 - relation extraction
 - entity descriptions and relation descriptions
 - claim / covariate extraction
+- reference-grounded question answering over a supplied chunk or retrieved context
+- structured JSON output under the project schema
+- source-grounded chunk/entity/relation summaries used by extraction and indexing
 - query routing (local vs global vs direct)
 
 **Stays with a larger model:**
@@ -26,6 +33,8 @@ The dividing line is **extraction vs synthesis**, not index-time vs query-time. 
 
 This matters because extraction is the high-volume call — it is per-chunk, it is structured, and it is verifiable. Those three properties are exactly what makes it a good fine-tuning target and a bad place to spend API budget.
 
+Training data must follow that boundary. Use datasets that exercise the GraphRAG flow directly: entities, relationships, claims, source-grounded descriptions/summaries, structured output enforcement, routing labels, and reference-grounded QA where the answer must be supported by the provided context. Generic public relation-extraction data is only a smoke-test and format-bootstrap tool; it is not the main training mixture.
+
 ## Two phases
 
 **Phase 1 — the models.** Produce a fine-tuned extraction model and a selected embedding model, both validated against a hand-annotated gold set from Kartik's own corpus. Phase 1 is what this repo currently contains. It ends when the Gate 3 downstream check in [`docs/PHASE1_GOALS.md`](docs/PHASE1_GOALS.md) passes.
@@ -34,18 +43,18 @@ This matters because extraction is the high-volume call — it is per-chunk, it 
 
 ## Decisions already made
 
-These came out of a completed feasibility assessment. They are settled; reopen them only with new evidence, not new opinion.
+These came out of a completed feasibility assessment plus Kartik's explicit model-priority decision. They are settled; reopen them only with new evidence, not new opinion.
 
 | Decision | Choice | Why |
 | --- | --- | --- |
-| Model | Qwen3-0.6B, non-thinking mode (`enable_thinking=False`) | Best sub-1B candidate; thinking mode wastes tokens on a structured task |
-| Fallback model | Qwen2.5-0.5B-Instruct | De-risked — published extraction F1 of 0.828 on this task class |
-| Rejected model | SmolLM2-360M | ~9 F1 points worse than 0.5B and collapses without few-shot prompting |
+| **Model (chosen primary)** | **SmolLM2-360M-Instruct** | Kartik's explicit choice. This is the model being tuned for the extraction path. The smaller, faster model is chosen first, with the prior feasibility gap accepted as a known, managed risk |
+| Benchmark comparison only | Qwen3-0.6B, non-thinking mode (`enable_thinking=False`) | Not co-primary and not the selected model. Use only to validate/de-risk the SmolLM2 choice on the same pilot subset |
+| Fallback only | Qwen2.5-0.5B-Instruct | Not selected. Revisit only if SmolLM2 fails hard-stop criteria after proper data and evaluation |
 | Embedding | EmbeddingGemma-300M primary, potion-retrieval-32M as a serious A/B | potion is ~200× faster on CPU; graph traversal may carry enough retrieval load that the quality gap costs nothing measurable |
 | Training | SFT → rejection-sampling self-distillation → constrained decoding at inference | Tasks are verifiable, so a verifier plus rejection sampling beats preference optimisation |
 | Dropped | DPO, RLHF, GRPO | Verifiable tasks don't need preference optimisation; GRPO's ~5 GB floor does not fit 3.4 GB of VRAM anyway |
-| Real training runs | Kaggle T4 (16 GB), full fine-tune | Full FT of 0.6B needs ~6.5 GB, and the 1650 Ti is an estimated 25–50× slower than a 4090 — a 4–8 h T4 run would be weeks |
-| Iteration training runs | **Local 1650 Ti, plain LoRA** | LoRA on 0.6B is ~2.0–3.0 GB and fits 3.4 GB. Pilots, debugging, resume tests, HP sanity checks belong here |
+| Real training runs | Kaggle T4 (16 GB), full fine-tune | Gate numbers come from the shipping full-FT recipe. The 360M full-FT footprint is not measured yet; Kaggle stays the default until a committed memory test proves otherwise |
+| Iteration training runs | **Local 1650 Ti, plain LoRA** | LoRA on 360M is expected around 1.0–1.5 GB; LoRA on 0.6B is ~2.0–3.0 GB. Pilots, debugging, resume tests, HP sanity checks belong here |
 | Local hardware role | LoRA iteration, inference, evaluation, integration | Not a full-FT box, but genuinely a training box |
 | Constrained decoding | XGrammar or Outlines | Guarantees parseable output |
 
@@ -55,6 +64,15 @@ Two consequences of that last row are load-bearing and appear throughout the doc
 2. **T4 is SM 7.5**, so fp16 + `GradScaler`. No bf16. Any config or notebook that assumes bf16 is wrong for this project. (The local 1650 Ti is SM 7.5 too.)
 
 And one local-training consequence worth knowing before the first run: on SM 7.5 there is **no FlashAttention-2**, so naive attention at sequence length 4096 costs roughly **537 MB per layer**. Since extraction prompts are long, *context length — not parameter count — is what will OOM the local card*. Local training must explicitly use PyTorch SDPA's memory-efficient backend or xformers. Prefer plain LoRA over QLoRA locally: 4-bit saves only ~540 MB on a 0.72 GB base and costs dequantisation overhead.
+
+### Two risks that come with the 360M choice
+
+Accepted, not ignored. Both are planning constraints:
+
+1. **It may still need few-shot prompting in production.** The prior feasibility assessment records SmolLM2-360M at **0.527 F1 without few-shot** versus **0.735 with 2-shot** (external figures, not measured here). If the production prompt has to carry demonstrations, those tokens go into every chunk's context — which erodes the throughput advantage that motivated picking the smaller model. Measure the with- and without-demonstration throughput, not just the quality.
+2. **8,192 tokens is the native context budget.** Hugging Face `AutoConfig` for `HuggingFaceTB/SmolLM2-360M-Instruct` reports `max_position_embeddings` 8192. Use that full native budget for GraphRAG capability pilots, because extraction, reference-grounded QA, and context-aware summaries all depend on long context. It fits a ~1,200-token chunk plus 2-shot demonstrations, but leaves no headroom for wider chunks, more shots, or gleaning passes. Any design that wants larger chunks or multi-round gleaning has to fit inside 8192 or change model.
+
+Gate 0 may include Qwen3-0.6B as a comparison, but the project remains SmolLM2-first. Any side-by-side run exists to validate and de-risk Kartik's SmolLM2 choice; it does not make Qwen co-primary, and it is diagnostic rather than a gate number. See [`docs/PHASE1_GOALS.md`](docs/PHASE1_GOALS.md).
 
 ## Top risk
 
@@ -68,11 +86,17 @@ Mitigation is mandatory, not optional:
 
 ## Status
 
-Phase 1, pre-Gate-0. Scaffold and planning only. No training has been run, no models downloaded, no data collected.
+Phase 1, pre-Gate-0. Scaffold plus local smoke plumbing.
+
+Done: repo scaffold, local venv on `D:`, DocRED open-data format-bootstrap pull, one tiny SmolLM2-360M local LoRA smoke run, one tiny QLoRA rank sweep over r=8, r=16, and r=32, one 5k-example QLoRA rank sweep over r=8, r=16, and r=32, three context memory probes, and a stock relation-extraction smoke test. The smoke run shows local CUDA training and loss movement on a 16-train / 4-val diagnostic subset; the recorded values live in [`runs/20260918-080000-smollm2-docred-lora-smoke/metrics.json`](runs/20260918-080000-smollm2-docred-lora-smoke/metrics.json) and [`runs/20260918-080000-smollm2-docred-lora-smoke/env.json`](runs/20260918-080000-smollm2-docred-lora-smoke/env.json). The 5k QLoRA sweep selected r=16 for the next short-context local pilot under this config, based on [`runs/20260919-003400-smollm2-docred5k-qlora-r16/metrics.json`](runs/20260919-003400-smollm2-docred5k-qlora-r16/metrics.json); r=32 is not selected because [`runs/20260919-042300-smollm2-docred5k-qlora-r32/metrics.json`](runs/20260919-042300-smollm2-docred5k-qlora-r32/metrics.json) records `train_loss_finite` false. Native-context local QLoRA training at r=16 failed with `OutOfMemoryError` in [`runs/20260919-ctx8192-smollm2-qlora-r16-probe/metrics.json`](runs/20260919-ctx8192-smollm2-qlora-r16-probe/metrics.json), while 4096-token and 6144-token synthetic probes completed in [`runs/20260919-ctx4096-smollm2-qlora-r16-probe/metrics.json`](runs/20260919-ctx4096-smollm2-qlora-r16-probe/metrics.json) and [`runs/20260919-ctx6144-smollm2-qlora-r16-probe/metrics.json`](runs/20260919-ctx6144-smollm2-qlora-r16-probe/metrics.json). Run 8192-token GraphRAG capability pilots on Kaggle. The stock relation-extraction smoke improved from no parseable JSON under plain prompting to `strict_relation_f1` 0.07692307692307693 under chat one-shot prompting in [`runs/20260919-relation-smoke-smollm2-stock-chat-oneshot/metrics.json`](runs/20260919-relation-smoke-smollm2-stock-chat-oneshot/metrics.json), which is still not usable without task training and constrained decoding. The QLoRA rank sweeps, memory probes, and relation smoke runs are indexed in [`docs/RUN_LEDGER.md`](docs/RUN_LEDGER.md).
+
+Not done: no gold set, no Gate 0 baseline, no optional Qwen3 comparison pilot, no GraphRAG-specific SFT mixture, no Kaggle full fine-tune, and no gate metric.
 
 The immediate critical path is the **gold set** — 200–500 hand-annotated examples from Kartik's own corpus. Everything else in Phase 1 is measured against it, so nothing downstream can start until it exists. See [`docs/DATA_STRATEGY.md`](docs/DATA_STRATEGY.md).
 
 Known blockers are tracked in [`docs/BLOCKERS.md`](docs/BLOCKERS.md) rather than left implicit. Two of them are policy questions only Kartik can answer.
+
+Benchmark process and committed run evidence are tracked in [`docs/BENCHMARKING_PROTOCOL.md`](docs/BENCHMARKING_PROTOCOL.md) and [`docs/RUN_LEDGER.md`](docs/RUN_LEDGER.md).
 
 ## Getting started
 

@@ -33,13 +33,14 @@ A result that cannot be regenerated is not a result.
 - **Pin versions.** `requirements.txt` / `pyproject.toml` pin exact versions, including `transformers`, `torch`, `peft`, `trl`, and the constrained-decoding library. Kaggle's base image moves; pinning is what stops a silent behaviour change from being read as a training improvement.
 - **Seed everything.** `random`, `numpy`, `torch`, and the dataloader. The seed is a config field, never a literal in code. Note in the results file that full determinism on GPU is not guaranteed even so.
 - **Config-driven runs.** Every run is `script + config file`. No editing code to change a hyperparameter. The exact config used is copied into the run's output directory — not referenced by path, copied, because the file on disk will change.
-- **No hard-coded paths.** Not `F:\...`, not `/kaggle/input/...`, not `C:\Users\...`. Paths come from config or environment. The same config must run locally and on Kaggle with only the path block changed.
+- **No hard-coded paths.** Not `D:\...`, not `F:\...`, not `/kaggle/input/...`, not `C:\Users\...`. Paths come from config or environment. The same config must run locally and on Kaggle with only the path block changed.
 - **Record the environment.** Every run writes `env.json`: git commit SHA, dirty-tree flag, python version, key package versions, GPU name, CUDA version. A run from a dirty tree is marked dirty and its numbers are provisional.
 
 ## 4. Experiment tracking
 
 - Every run gets a directory: `runs/<YYYYMMDD-HHMMSS>-<short-name>/` containing `config.yaml`, `env.json`, `metrics.json`, `log.txt`, and any predictions dumped for error analysis.
 - `metrics.json` is machine-readable and flat. It carries the metric values, the gold-set version/hash it was measured against, and the number of examples scored.
+- Every completed, failed, or aborted stage run gets a row in `docs/RUN_LEDGER.md` in the same commit as its run files. The ledger cites the run files and states the decision, next step, and caveats.
 - Local tracking is files on disk first. If a tracker (W&B, TensorBoard) is added, it is a *mirror* — the files stay authoritative, because the tracker is an account that can be lost and the files are in the repo.
 - Failed and aborted runs are kept and marked `status: failed` in `metrics.json`. Deleting failed runs is how a project accidentally reports only its lucky seeds.
 - Run directories with weights are gitignored; `metrics.json`, `config.yaml`, and `env.json` are **committed**.
@@ -65,9 +66,9 @@ This rule exists because a plausible fabricated metric is more expensive than no
 
 ## 7. Training workflow — local first, Kaggle for real
 
-**Local LoRA on the 1650 Ti is a first-class part of the loop, not a fallback.** LoRA on Qwen3-0.6B is ~2.0–3.0 GB and fits the 3.4 GB card. Use it for: overfit-a-tiny-batch checks, pipeline debugging, the checkpoint-and-resume test, hyperparameter sanity, and 1–5k pilot runs.
+**Local LoRA on the 1650 Ti is a first-class part of the loop, not a fallback.** LoRA on SmolLM2-360M is expected around 1.0–1.5 GB, and LoRA on Qwen3-0.6B is ~2.0–3.0 GB; both fit the 3.4 GB card. Use it for: overfit-a-tiny-batch checks, pipeline debugging, the checkpoint-and-resume test, hyperparameter sanity, and 1–5k pilot runs.
 
-**Kaggle is for the real runs** — full fine-tune (~6.5 GB, doesn't fit locally), and anything that produces a gate number. The local card is an estimated 25–50× slower than a 4090, so a 4–8 h T4 run is weeks locally.
+**Kaggle is for the real runs** — full fine-tune and anything that produces a gate number. The 360M full-FT footprint is not measured yet; Kaggle remains the default until a committed memory test proves local full FT is viable. The local card is an estimated 25–50× slower than a 4090, so a 4–8 h T4 run is weeks locally.
 
 Rules that follow from this:
 
@@ -81,8 +82,16 @@ Rules that follow from this:
 
 Kaggle sessions are time-boxed and can die. Design for that from the first run, not after losing one.
 
-- **Checkpoint-and-resume is a first-class requirement, not a nice-to-have.** A training run must be resumable from the last checkpoint with a single config flag. This is tested by deliberately killing a short run and resuming it — before the first long run, not after.
-- Checkpoint every N steps where N × step-time is comfortably under the session limit, and save optimizer + scheduler + RNG state, not just weights. Weights-only checkpoints make resume a lie.
+**The notebook is generated from locally-validated code, never written independently.** Validate the training loop locally with LoRA on a small subset first; the Kaggle notebook is then produced from that same code. Divergence between the local and Kaggle training paths is how these projects break — two separately-written loops drift on a tokenizer flag or a collator, and the bug surfaces as "the Kaggle run scored worse" rather than as an error.
+
+**Sessions must complete inside the limit by design.** Target a graceful stop at **8–9 hours** against Kaggle's cap, triggered by an **elapsed-time watchdog checked inside the training loop** — not by estimating up front that the run will fit.
+
+**The shutdown sequence on a time-limit stop is fixed:** finish the current step → save weights → save optimizer state → save scheduler state → save RNG state → save step/epoch counters → write a **resume manifest** → **exit cleanly**, so `/kaggle/working` is preserved. An unclean exit can lose the outputs, which turns a graceful stop into a lost session anyway.
+
+- **Checkpoint-and-resume is a first-class requirement from day one, not a nice-to-have.** A run must resume from the last checkpoint with a single config flag. Tested by deliberately killing a short run and resuming it — locally, before the first long Kaggle run.
+- **Resume must continue the LR schedule and the data ordering, not silently restart them.** This is the classic bug and it deserves naming: a resumed run that restarts warmup or reshuffles from epoch zero produces a plausible loss curve and an **invalid result**. It does not crash and it does not warn — it quietly trains a different recipe than the one you believe you ran. Verify both the LR value and the data position continue, explicitly.
+- **Checkpoint periodically as well as at the time limit**, so an unexpected disconnect costs at most N steps. The time-limit checkpoint handles the expected ending; periodic ones handle the unexpected.
+- Save optimizer + scheduler + RNG state, not just weights. Weights-only checkpoints make resume a lie.
 - Checkpoints go to Kaggle's persistent output, and are pulled down and stored deliberately. Nothing important survives only inside a running session.
 - **fp16 + `GradScaler`.** The T4 is SM 7.5 and has no bf16. A config specifying bf16 is a bug, not a preference.
 - The notebook pins the repo to a commit SHA, not a branch. A run that cloned `main` at an unknown time is not reproducible.

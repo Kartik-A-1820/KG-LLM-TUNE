@@ -16,16 +16,23 @@ paths:
   sft_val: null
   gold_set: eval/gold/v1
   cache: data/cache
+  checkpoint_dir: null         # set per environment; Kaggle uses its working output area
 
 model:
-  base: Qwen/Qwen3-0.6B
-  enable_thinking: false       # structured extraction; thinking tokens are pure cost
-  # Fallback if Qwen3-0.6B underperforms: Qwen/Qwen2.5-0.5B-Instruct
-  # (published extraction F1 0.828 on this task class — external figure, not ours)
-  max_seq_len: 2048
+  base: HuggingFaceTB/SmolLM2-360M-Instruct   # Kartik's Phase 1 primary
+  # Benchmark comparison: Qwen/Qwen3-0.6B with enable_thinking: false
+  # (thinking tokens are pure cost on a structured extraction task).
+  # Fallback if both underperform: Qwen/Qwen2.5-0.5B-Instruct
+  # (prior feasibility assessment cites published extraction F1 0.828;
+  # external figure, not ours)
+  max_context: 8192            # Native SmolLM2-360M-Instruct budget from Hugging Face AutoConfig.
+  few_shot_examples: 2         # prior feasibility assessment: 0.527 zero-shot vs 0.735 2-shot
+  # Use the full native context for GraphRAG capability pilots: extraction,
+  # reference-grounded QA, and context-aware summaries all need this budget.
+  max_seq_len: 8192
 
 train:
-  strategy: full               # full FT of 0.6B needs ~6.5 GB; fits T4, not the 1650 Ti
+  strategy: full               # shipping recipe; gate numbers come from full FT
   precision: fp16              # T4 is SM 7.5 — no bf16. Not a preference.
   grad_scaler: true
   epochs: 3                    # ESTIMATE
@@ -40,13 +47,30 @@ train:
 
 checkpoint:
   # Checkpoint-and-resume is a hard requirement, not a nice-to-have.
-  # N x step-time must sit comfortably under the Kaggle session limit.
+  # Periodic checkpoints bound the cost of an UNEXPECTED disconnect;
+  # the watchdog below handles the EXPECTED ending.
   every_n_steps: 200           # ESTIMATE — set from measured step time
   keep_last: 3
   save_optimizer: true         # weights-only checkpoints make resume a lie
   save_scheduler: true
   save_rng_state: true
+  save_step_epoch: true
+  write_resume_manifest: true
+  dir: null                    # resolved from paths.checkpoint_dir
   resume_from: null            # single flag flips a run into resume
+  # Resume MUST continue the LR schedule and the data ordering. A resume that
+  # restarts warmup or reshuffles from epoch 0 gives a plausible loss curve and
+  # an invalid run -- it never crashes and never warns. Assert both on resume.
+  assert_lr_continuity: true
+  assert_data_position: true
+
+watchdog:
+  # Sessions complete inside the limit BY DESIGN, not by hoping the run fits.
+  # Checked every step; on trip, finish the step, checkpoint fully, exit cleanly
+  # so Kaggle preserves the outputs. An unclean exit can lose them.
+  enabled: true
+  stop_after_hours: 8.5        # graceful stop against Kaggle's cap
+  check_every_n_steps: 1
 
 decode:
   # Inference-time only. Training sees ordinary text.

@@ -1,0 +1,12 @@
+attn_implementation: sdpa
+bnb_4bit_quant_type: nf4
+bnb_4bit_use_double_quant: true
+input_jsonl: eval\open_relation_smoke\relation_smoke_v1.jsonl
+load_in_4bit: true
+max_examples: 5
+max_input_tokens: 1536
+max_new_tokens: 768
+model: HuggingFaceTB/SmolLM2-360M-Instruct
+note: Diagnostic open relation extraction smoke only. Not a gate metric.
+output_dir: runs\20260919-relation-smoke-smollm2-stock
+seed: 1820

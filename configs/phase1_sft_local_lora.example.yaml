@@ -18,13 +18,27 @@ paths:
   cache: data/cache
 
 model:
-  base: Qwen/Qwen3-0.6B
-  enable_thinking: false
+  base: HuggingFaceTB/SmolLM2-360M-Instruct   # Kartik's Phase 1 primary
+  # The early diagnostic pilot runs this side by side with Qwen/Qwen3-0.6B
+  # on the same subset.
+  # Cheap de-risking: does the ~9 F1 gap survive fine-tuning on this corpus?
+  # 8k context is the native SmolLM2-360M-Instruct budget from Hugging Face
+  # AutoConfig: ~1,200-token chunk + 2-shot + schema fits;
+  # wider chunks, more shots, or gleaning passes do not.
+  max_context: 8192
+  # Prior feasibility assessment: 360M measured 0.527 F1 zero-shot vs
+  # 0.735 with 2-shot (external figures, not measured here).
+  # If demonstrations stay in the production prompt, they cost throughput —
+  # so throughput must be measured with the prompt that actually ships.
+  few_shot_examples: 2
   # Context length is the binding constraint on this card, not parameter count.
   # SM 7.5 has no FlashAttention-2; naive attention at seq 4096 is ~537 MB/layer.
-  # Extraction prompts are long (~1,200-token chunk + few-shot + schema), so keep
-  # this honest to the real prompt and let attention_impl carry the memory.
-  max_seq_len: 2048            # ESTIMATE — raise only after measuring headroom
+  # Extraction, grounded QA, and context-aware summarization prompts are long, so
+  # the GraphRAG capability pilot targets the full native context. Run a memory
+  # probe first on the local card; if it does not fit, do not silently shrink the
+  # capability pilot — move that pilot to Kaggle or explicitly label a shorter
+  # run as smoke-only.
+  max_seq_len: 8192
 
 attention:
   # Not optional. A silent fallback to the naive path presents as an OOM that

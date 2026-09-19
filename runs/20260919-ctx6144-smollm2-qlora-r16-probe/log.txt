@@ -1,0 +1,6 @@
+2026-09-19 08:37:54 probe started
+2026-09-19 08:37:54 loading config HuggingFaceTB/SmolLM2-360M-Instruct
+2026-09-19 08:37:55 loading tokenizer HuggingFaceTB/SmolLM2-360M-Instruct
+2026-09-19 08:37:56 loading model qlora=True
+2026-09-19 08:37:58 running forward_backward_optimizer_step
+2026-09-19 08:45:03 probe complete

@@ -1,0 +1,23 @@
+{
+  "attn_implementation_active": "sdpa",
+  "attn_implementation_requested": "sdpa",
+  "batch_size": 1,
+  "cuda_max_memory_allocated_bytes": 10418790912,
+  "cuda_max_memory_reserved_bytes": 11081351168,
+  "cuda_mem_free_bytes_at_end": 0,
+  "cuda_mem_total_bytes_at_end": 4294639616,
+  "elapsed_seconds": 428.494,
+  "lora_alpha": 32,
+  "lora_r": 16,
+  "loss": 13.170065879821777,
+  "max_length": 6144,
+  "model": "HuggingFaceTB/SmolLM2-360M-Instruct",
+  "native_max_position_embeddings": 8192,
+  "note": "Synthetic local context memory probe only. Not a quality or gate metric.",
+  "parameter_count": 213218240,
+  "seed": 1820,
+  "status": "complete",
+  "supervised_tail_tokens": 512,
+  "trainable_parameter_count": 8683520,
+  "training_mode": "qlora"
+}

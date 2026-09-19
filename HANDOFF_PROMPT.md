@@ -14,7 +14,7 @@ You are working on **KG-LLM-TUNE**. Read this entire brief before doing anything
 
 The project exists in two places, and **they must stay in sync**:
 
-- **Local:** `F:\KG-LLM-TUNE\` (Windows machine)
+- **Local:** `D:\KG-LLM-TUNE\` (Windows machine; moved from `F:\KG-LLM-TUNE\` on 2026-09-17 for space)
 - **Remote:** `https://github.com/Kartik-A-1820/KG-LLM-TUNE` (public)
 
 Pull before you start. Push when you finish. If the two have diverged, stop and report the divergence rather than resolving it by overwriting one side.
@@ -37,6 +37,9 @@ The dividing line is **extraction vs synthesis** — *not* index-time vs query-t
 - relation extraction
 - entity descriptions and relation descriptions
 - claim / covariate extraction
+- reference-grounded question answering over a supplied chunk or retrieved context
+- structured JSON output under the project schema
+- source-grounded chunk/entity/relation summaries used by extraction and indexing
 - query routing
 
 **A larger model keeps:**
@@ -47,6 +50,8 @@ The dividing line is **extraction vs synthesis** — *not* index-time vs query-t
 
 Why the line falls there: extraction is high-volume, schema-structured, and verifiable. Synthesis is low-volume, free-form, and unverifiable — so there is no verifier, no rejection sampling, and a much worse feedback loop for fine-tuning it. Query routing joins the small model despite being query-time because it is a short classification with a fixed label set.
 
+Training data follows this split. Do **not** train on broad available datasets merely because they exist. The SFT mixture should be built from tasks the GraphRAG extraction/indexing path actually needs: entity and relationship extraction, claims/covariates, source-grounded descriptions and summaries, strict structured output, routing labels, and reference-grounded QA where every answer is supported by the provided text. Generic public RE data such as DocRED is for format bootstrapping and smoke tests only.
+
 ## 4. Two phases
 
 - **Phase 1 (current):** produce a fine-tuned extraction model and a selected embedding model, validated against a hand-annotated gold set. This is all the repo contains.
@@ -54,13 +59,18 @@ Why the line falls there: extraction is high-volume, schema-structured, and veri
 
 ## 5. Decided technical choices — do not change these without flagging
 
-These came out of a completed feasibility assessment. They are settled. If you believe one is wrong, **say so explicitly and wait** — do not quietly substitute an alternative.
+These came out of a completed feasibility assessment plus Kartik's explicit model-priority decision. They are settled. If you believe one is wrong, **say so explicitly and wait** — do not quietly substitute an alternative.
 
-**Model:** Qwen3-0.6B in non-thinking mode (`enable_thinking=False`). Thinking tokens are pure cost on a structured extraction task.
+**Model (primary): SmolLM2-360M-Instruct.** This is Kartik's explicit primary choice. It was chosen deliberately, with full knowledge that the prior feasibility assessment puts it ~9 F1 points behind a 0.5B. The size and speed are worth the risk to Kartik; the risk is managed, not ignored. Do not substitute a different base model.
 
-**Runner-up / de-risked fallback:** Qwen2.5-0.5B-Instruct, which has a published extraction F1 of 0.828 on this task class. (External figure, not measured here.)
+**Benchmark comparison, not co-primary:** Qwen3-0.6B in non-thinking mode (`enable_thinking=False`) — thinking tokens are pure cost on a structured task. The early local LoRA pilot runs both models side by side on the same 1–5k subset to validate and de-risk Kartik's primary-model choice: does the 9-point external gap survive fine-tuning *on this corpus*? This pilot is diagnostic, not a gate number and not a model-priority vote.
 
-**Explicitly rejected:** SmolLM2-360M. It costs ~9 F1 points versus the 0.5B and collapses without few-shot prompting.
+**Fallback:** Qwen2.5-0.5B-Instruct — the prior feasibility assessment cites published extraction F1 of 0.828 on this task class (external figure, not measured here).
+
+**Two 360M-specific risks that are planning constraints, not footnotes:**
+
+1. **Few-shot dependence.** The prior feasibility assessment records 0.527 F1 zero-shot vs 0.735 with 2-shot (external figures, not measured here). If demonstrations must stay in the production prompt, their tokens enter every chunk's context and **erode the throughput advantage that motivated the smaller model**. Gate 1 throughput must therefore be measured with the prompt that actually ships, demonstrations included.
+2. **8,192 tokens is the native context budget.** Hugging Face `AutoConfig` for `HuggingFaceTB/SmolLM2-360M-Instruct` reports `max_position_embeddings` 8192. A ~1,200-token chunk plus 2-shot plus schema fits. There is no headroom for wider chunks, more shots, or gleaning passes. Every prompt design must fit inside 8192, or the model choice changes. GraphRAG capability pilots should target the full native context for extraction, reference-grounded QA, and context-aware summaries; shorter local runs are smoke-only unless explicitly labelled otherwise.
 
 **Embedding:** EmbeddingGemma-300M primary, with **potion-retrieval-32M as a serious A/B**, not a token alternative. potion is ~200× faster on CPU, and the hypothesis is that graph traversal carries enough of GraphRAG's retrieval load that the quality gap may not show up end to end. A/B is decided on end-to-end answer quality, not embedding-leaderboard scores.
 
@@ -77,8 +87,8 @@ These came out of a completed feasibility assessment. They are settled. If you b
 
 | Where | What | Why |
 | --- | --- | --- |
-| **Local 1650 Ti (3.4 GB), plain LoRA** | Overfit-a-tiny-batch checks, pipeline debugging, checkpoint-and-resume tests, HP sanity, 1–5k pilots | LoRA on 0.6B is ~2.0–3.0 GB and fits. Getting the loop right before spending a Kaggle session is good practice |
-| **Kaggle T4 (16 GB), full fine-tune** | Real SFT runs, rejection sampling at volume, **anything producing a gate number** | Full FT needs ~6.5 GB and doesn't fit locally; the local card is an estimated 25–50× slower than a 4090, so a 4–8 h T4 run is weeks |
+| **Local 1650 Ti (3.4 GB), plain LoRA** | Overfit-a-tiny-batch checks, pipeline debugging, checkpoint-and-resume tests, HP sanity, 1–5k pilots, the Gate 0 model bake-off | LoRA on 360M is ~1.0–1.5 GB, on 0.6B ~2.0–3.0 GB — both fit. Getting the loop right before spending a Kaggle session is good practice |
+| **Kaggle T4 (16 GB), full fine-tune** | Real SFT runs, rejection sampling at volume, **anything producing a gate number** | The 360M full-FT footprint is not measured yet; Kaggle is the default for the shipping recipe until a committed memory test proves local full FT is viable. The local card is an estimated 25–50× slower than a 4090, so a 4–8 h T4 run is weeks |
 
 Real runs are **full fine-tune, not LoRA**, because this is **task shift** — a new output format and a new behaviour — which is the regime where the LoRA-Learns-Less evidence favours full FT. LoRA is the iteration tool, not the shipping recipe. **Never report a local LoRA number against a gate threshold.**
 
@@ -104,7 +114,7 @@ Grammar constrains *shape*; overlap constrains *groundedness*. Both are required
 
 All metrics are measured against a **hand-annotated gold set from Kartik's own corpus** (200–500 examples), not a public benchmark and not teacher output.
 
-**Gate 0 — baseline, before any training.** Measure stock Qwen3-0.6B, a 7B-class model, and the teacher on the gold set with identical prompts and decoder. Proceed only if fine-tuning has visible headroom. Stop and rethink if stock 0.6B is already near the teacher, if the teacher itself scores poorly (the schema is the problem, not the model), or if the 7B already solves it at acceptable local speed.
+**Gate 0 — baseline, before any training.** Measure stock SmolLM2-360M, stock Qwen3-0.6B, a 7B-class model, and the teacher on the gold set with identical prompts and decoder — each small model **with and without demonstrations**. Then run the **side-by-side LoRA pilot** (360M vs 0.6B, same 1–5k subset) described in §5 to validate and de-risk the SmolLM2 primary choice; it is diagnostic, not a gate number, and it does not make Qwen co-primary. Proceed only if fine-tuning has visible headroom. Stop and rethink if the stock primary is already near the teacher, if the teacher itself scores poorly (the schema is the problem, not the model), or if the 7B already solves it at acceptable local speed.
 
 **Gate 1 — SFT:**
 
@@ -140,13 +150,20 @@ Read `AGENTS.md` in full. The condensed version:
 
 **The benchmark-number rule, which is absolute:** *no number enters any document, commit message, summary, or decision unless it came from a committed results file, and the citation names that file.* Write `entity F1 0.81 (runs/20260920-sft-v3/metrics.json)`. Never interpolate, never infer a number from a related metric, never carry one forward from another project. Mark estimates as estimates with their basis. **If you do not have a number, say you do not have it.** A plausible fabricated metric is more expensive than no metric, because it gets planned against.
 
-**Reproducibility:** pinned versions; seed in the config, never a literal; every run is `script + config`; **no hard-coded paths** (not `F:\...`, not `/kaggle/input/...`); the config is *copied* into the run directory, not referenced. Every run writes `env.json` with commit SHA, dirty-tree flag, versions, GPU, CUDA.
+**Reproducibility:** pinned versions; seed in the config, never a literal; every run is `script + config`; **no hard-coded paths** (not `D:\...`, not `F:\...`, not `/kaggle/input/...`); the config is *copied* into the run directory, not referenced. Every run writes `env.json` with commit SHA, dirty-tree flag, versions, GPU, CUDA.
 
-**Run tracking:** `runs/<timestamp>-<name>/` with `config.yaml`, `env.json`, `metrics.json`, `log.txt`. Failed runs are **kept** and marked failed. `metrics.json` records the gold-set version/hash it scored against. Weights are gitignored; metrics/config/env are committed.
+**Run tracking:** `runs/<timestamp>-<name>/` with `config.yaml`, `env.json`, `metrics.json`, `log.txt`. Failed runs are **kept** and marked failed. `metrics.json` records the gold-set version/hash it scored against. Weights are gitignored; metrics/config/env are committed. Every completed, failed, or aborted stage run also gets a row in `docs/RUN_LEDGER.md` in the same commit.
 
 **Notebooks:** exploration and Kaggle execution only. Training logic lives in `src/kg_llm_tune/`; the Kaggle notebook is a thin driver that clones a **pinned commit SHA**. Anything copied into a second notebook graduates to `src/`. Strip outputs. No notebook is ever the source of a benchmark number.
 
-**Checkpoint-and-resume is a first-class requirement.** Save optimizer, scheduler, and RNG state — weights-only checkpoints make resume a lie. Test resume by deliberately killing a short run, locally, before the first long Kaggle run.
+**Kaggle notebook requirements — designed in, not retrofitted:**
+
+- The notebook is **generated from locally-validated code**, never written independently. Validate the loop locally with LoRA on a small subset first. Divergence between the local and Kaggle training paths is how these projects break — two separately-written loops drift on a tokenizer flag, and the bug surfaces as "Kaggle scored worse" rather than as an error.
+- Sessions complete inside the limit **by design**: a graceful stop at **8–9 hours**, triggered by an **elapsed-time watchdog checked inside the training loop**, not by estimating up front that the run will fit.
+- On stop, the sequence is fixed: finish the current step → save weights → optimizer state → scheduler state → RNG state → step/epoch counters → write a **resume manifest** → **exit cleanly** so `/kaggle/working` is preserved. An unclean exit loses the outputs and turns a graceful stop into a lost session.
+- **Resume is first-class from day one, and must continue the LR schedule and data ordering — not silently restart them.** This is the classic bug: a resumed run that restarts warmup or reshuffles from epoch zero produces a plausible loss curve and an **invalid result**, without crashing or warning. Assert both continue.
+- **Checkpoint periodically as well as at the time limit**, so an unexpected disconnect costs at most N steps.
+- Save optimizer, scheduler, and RNG state — weights-only checkpoints make resume a lie. Test resume by deliberately killing a short run, locally, before the first long Kaggle run.
 
 **Data provenance:** every dataset gets a row in `data/README.md` (URL, licence, date, SHA, use). `Babelscape/rebel-dataset` is **CC-BY-SA-4.0** — share-alike, with implications for derived data; do not include it until the repo licence is settled. Teacher ToS must be checked for output-use restrictions before generating training data.
 
@@ -156,11 +173,13 @@ Read `AGENTS.md` in full. The condensed version:
 
 ## 9. Current status
 
-**Phase 1, pre-Gate-0.** Scaffold and planning only.
+**Phase 1, pre-Gate-0.** Scaffold plus local smoke plumbing.
 
-Done: repo created, full document scaffold written (README, AGENTS.md, `docs/PHASE1_GOALS.md`, `docs/ARCHITECTURE.md`, `docs/DATA_STRATEGY.md`, `docs/BLOCKERS.md`), directory structure with purpose READMEs, `.gitignore`, example configs for both the Kaggle full-FT run and the local LoRA run.
+Done: repo created, full document scaffold written (README, AGENTS.md, `docs/PHASE1_GOALS.md`, `docs/ARCHITECTURE.md`, `docs/DATA_STRATEGY.md`, `docs/BLOCKERS.md`, `docs/BENCHMARKING_PROTOCOL.md`, `docs/RUN_LEDGER.md`), directory structure with purpose READMEs, `.gitignore`, example configs for both the Kaggle full-FT run and the local LoRA run, DocRED open-data format-bootstrap pull, repo-local venv on `D:`, one tiny SmolLM2-360M local LoRA smoke run, one tiny QLoRA rank sweep over r=8, r=16, and r=32, one 5k-example QLoRA rank sweep over r=8, r=16, and r=32, three context memory probes, and a stock relation-extraction smoke test.
 
-Not done: **no code written**, no training run, no models downloaded, no data collected, no gold set.
+Committed run evidence: `runs/20260918-080000-smollm2-docred-lora-smoke/metrics.json`, `runs/20260918-203600-smollm2-docred-qlora-r8/metrics.json`, `runs/20260918-203700-smollm2-docred-qlora-r16/metrics.json`, `runs/20260918-203800-smollm2-docred-qlora-r32/metrics.json`, `runs/20260918-210000-smollm2-docred5k-qlora-r8/metrics.json`, `runs/20260919-003400-smollm2-docred5k-qlora-r16/metrics.json`, `runs/20260919-042300-smollm2-docred5k-qlora-r32/metrics.json`, `runs/20260919-ctx4096-smollm2-qlora-r16-probe/metrics.json`, `runs/20260919-ctx6144-smollm2-qlora-r16-probe/metrics.json`, `runs/20260919-ctx8192-smollm2-qlora-r16-probe/metrics.json`, `runs/20260919-relation-smoke-smollm2-stock/metrics.json`, and `runs/20260919-relation-smoke-smollm2-stock-chat-oneshot/metrics.json`. These are diagnostic only, not gate metrics. They used DocRED format-bootstrap data, synthetic memory probing, or a synthetic/public relation fixture, not the target GraphRAG SFT mix. The current next short-context local QLoRA rank is r=16 per `docs/RUN_LEDGER.md` and `runs/20260919-003400-smollm2-docred5k-qlora-r16/metrics.json`; r=32 is not selected under this config because `runs/20260919-042300-smollm2-docred5k-qlora-r32/metrics.json` records `train_loss_finite` false. Native-context local QLoRA training at r=16 failed with `OutOfMemoryError` per `runs/20260919-ctx8192-smollm2-qlora-r16-probe/metrics.json`, while 4096-token and 6144-token synthetic probes completed per their metrics files. Run 8192-token GraphRAG capability pilots on Kaggle unless a shorter run is explicitly labelled smoke-only. Stock SmolLM2 is not yet usable for structured KG relation extraction: chat one-shot prompting reached only `strict_relation_f1` 0.07692307692307693 in `runs/20260919-relation-smoke-smollm2-stock-chat-oneshot/metrics.json`, with relation-label drift and low recall.
+
+Not done: no gold set, no Gate 0 baseline, no Qwen3 side-by-side pilot, no GraphRAG-specific SFT mixture, no Kaggle full fine-tune, and no gate metric.
 
 **Critical path — the gold set.** 200–500 hand-annotated examples from Kartik's own corpus, stratified for coverage, spans not just strings, with the annotation guideline written *before* annotating and a double-annotated slice to establish the noise floor. Nothing downstream can be measured until it exists. Protocol in `docs/DATA_STRATEGY.md` §1.
 

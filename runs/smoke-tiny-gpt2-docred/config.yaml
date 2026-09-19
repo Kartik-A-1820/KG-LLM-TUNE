@@ -1,0 +1,48 @@
+run:
+  name: smoke-tiny-gpt2-docred
+  seed: 1820
+  note: Diagnostic CPU loop check only. Not a gate metric and not SmolLM2 evidence.
+
+model:
+  base: sshleifer/tiny-gpt2
+
+data:
+  train_jsonl: data/open_pilots/docred_sft_v0/train.jsonl
+  val_jsonl: data/open_pilots/docred_sft_v0/val.jsonl
+  source_manifest: data/open_pilots/docred_sft_v0/manifest.json
+  source_dataset: thunlp/docred
+  source_license: mit
+
+train:
+  epochs: 2
+  max_train_examples: 8
+  max_val_examples: 4
+  max_length: 256
+  batch_size: 1
+  lr: 5.0e-5
+  allow_cpu: true
+
+command:
+  - python
+  - scripts/smoke_train_loss.py
+  - --model
+  - sshleifer/tiny-gpt2
+  - --allow-cpu
+  - --train-jsonl
+  - data/open_pilots/docred_sft_v0/train.jsonl
+  - --val-jsonl
+  - data/open_pilots/docred_sft_v0/val.jsonl
+  - --output-dir
+  - runs/smoke-tiny-gpt2-docred
+  - --epochs
+  - "2"
+  - --max-train-examples
+  - "8"
+  - --max-val-examples
+  - "4"
+  - --max-length
+  - "256"
+  - --batch-size
+  - "1"
+  - --lr
+  - 5e-5
