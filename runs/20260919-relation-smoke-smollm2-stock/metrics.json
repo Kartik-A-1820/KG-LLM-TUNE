@@ -1,0 +1,30 @@
+{
+  "attn_implementation_active": "sdpa",
+  "attn_implementation_requested": "sdpa",
+  "correct_relation_triples_strict": 0,
+  "cuda_max_memory_allocated_bytes": 319832576,
+  "cuda_max_memory_reserved_bytes": 350224384,
+  "cuda_mem_free_bytes_at_end": 3083599872,
+  "cuda_mem_total_bytes_at_end": 4294639616,
+  "elapsed_seconds": 340.979,
+  "examples": 5,
+  "gold_relation_triples": 20,
+  "input_jsonl": "eval\\open_relation_smoke\\relation_smoke_v1.jsonl",
+  "load_in_4bit": true,
+  "max_input_tokens": 1536,
+  "max_new_tokens": 768,
+  "model": "HuggingFaceTB/SmolLM2-360M-Instruct",
+  "note": "Diagnostic open relation extraction smoke only. Not a gate metric.",
+  "parse_success_count": 0,
+  "predicted_relation_triples": 0,
+  "predictions_path": "runs\\20260919-relation-smoke-smollm2-stock\\predictions.jsonl",
+  "schema_error_counts": {
+    "json_parse_failed": 5
+  },
+  "schema_valid_count": 0,
+  "seed": 1820,
+  "status": "complete",
+  "strict_relation_f1": 0.0,
+  "strict_relation_precision": 0.0,
+  "strict_relation_recall": 0.0
+}
