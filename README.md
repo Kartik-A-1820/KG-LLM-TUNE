@@ -1,8 +1,12 @@
 # KG-LLM-TUNE
 
-**Fine-tune a sub-1B model to own the extraction path of a GraphRAG pipeline, so that indexing runs locally at speed instead of costing a large-model API call per chunk.**
+**Fine-tune SmolLM2-360M-Instruct to own the extraction path of a GraphRAG pipeline, so that indexing runs locally at speed instead of costing a large-model API call per chunk.**
 
 That is the whole point of this repo. Everything below is detail.
+
+**Chosen model:** `HuggingFaceTB/SmolLM2-360M-Instruct`.
+
+SmolLM2-360M is the primary model for this project. Qwen models are not the chosen model; they appear only as benchmark comparisons or fallbacks to de-risk the SmolLM-first plan.
 
 ## The split: extraction vs synthesis
 
@@ -43,9 +47,9 @@ These came out of a completed feasibility assessment plus Kartik's explicit mode
 
 | Decision | Choice | Why |
 | --- | --- | --- |
-| **Model (primary)** | **SmolLM2-360M-Instruct** | Kartik's explicit primary choice: choose the smaller, faster model first, with the ~9 F1 gap from the prior feasibility assessment accepted as a known, managed risk |
-| Benchmark comparison | Qwen3-0.6B, non-thinking mode (`enable_thinking=False`) | Run at Gate 0 alongside the 360M on the same pilot subset, then later as a full comparison |
-| Fallback | Qwen2.5-0.5B-Instruct | De-risked — prior feasibility assessment cites published extraction F1 of 0.828 on this task class |
+| **Model (chosen primary)** | **SmolLM2-360M-Instruct** | Kartik's explicit choice. This is the model being tuned for the extraction path. The smaller, faster model is chosen first, with the prior feasibility gap accepted as a known, managed risk |
+| Benchmark comparison only | Qwen3-0.6B, non-thinking mode (`enable_thinking=False`) | Not co-primary and not the selected model. Use only to validate/de-risk the SmolLM2 choice on the same pilot subset |
+| Fallback only | Qwen2.5-0.5B-Instruct | Not selected. Revisit only if SmolLM2 fails hard-stop criteria after proper data and evaluation |
 | Embedding | EmbeddingGemma-300M primary, potion-retrieval-32M as a serious A/B | potion is ~200× faster on CPU; graph traversal may carry enough retrieval load that the quality gap costs nothing measurable |
 | Training | SFT → rejection-sampling self-distillation → constrained decoding at inference | Tasks are verifiable, so a verifier plus rejection sampling beats preference optimisation |
 | Dropped | DPO, RLHF, GRPO | Verifiable tasks don't need preference optimisation; GRPO's ~5 GB floor does not fit 3.4 GB of VRAM anyway |
@@ -68,7 +72,7 @@ Accepted, not ignored. Both are planning constraints:
 1. **It may still need few-shot prompting in production.** The prior feasibility assessment records SmolLM2-360M at **0.527 F1 without few-shot** versus **0.735 with 2-shot** (external figures, not measured here). If the production prompt has to carry demonstrations, those tokens go into every chunk's context — which erodes the throughput advantage that motivated picking the smaller model. Measure the with- and without-demonstration throughput, not just the quality.
 2. **8,192 tokens is the native context budget.** Hugging Face `AutoConfig` for `HuggingFaceTB/SmolLM2-360M-Instruct` reports `max_position_embeddings` 8192. Use that full native budget for GraphRAG capability pilots, because extraction, reference-grounded QA, and context-aware summaries all depend on long context. It fits a ~1,200-token chunk plus 2-shot demonstrations, but leaves no headroom for wider chunks, more shots, or gleaning passes. Any design that wants larger chunks or multi-round gleaning has to fit inside 8192 or change model.
 
-Gate 0 includes **both** SmolLM2-360M and Qwen3-0.6B in the baseline, and the early local LoRA pilot runs them side by side on the same subset. That pilot validates and de-risks Kartik's primary-model choice; it does not make Qwen co-primary, and it is diagnostic rather than a gate number. See [`docs/PHASE1_GOALS.md`](docs/PHASE1_GOALS.md).
+Gate 0 may include Qwen3-0.6B as a comparison, but the project remains SmolLM2-first. Any side-by-side run exists to validate and de-risk Kartik's SmolLM2 choice; it does not make Qwen co-primary, and it is diagnostic rather than a gate number. See [`docs/PHASE1_GOALS.md`](docs/PHASE1_GOALS.md).
 
 ## Top risk
 
@@ -86,7 +90,7 @@ Phase 1, pre-Gate-0. Scaffold plus local smoke plumbing.
 
 Done: repo scaffold, local venv on `D:`, DocRED open-data format-bootstrap pull, one tiny SmolLM2-360M local LoRA smoke run, one tiny QLoRA rank sweep over r=8, r=16, and r=32, one 5k-example QLoRA rank sweep over r=8, r=16, and r=32, three context memory probes, and a stock relation-extraction smoke test. The smoke run shows local CUDA training and loss movement on a 16-train / 4-val diagnostic subset; the recorded values live in [`runs/20260918-080000-smollm2-docred-lora-smoke/metrics.json`](runs/20260918-080000-smollm2-docred-lora-smoke/metrics.json) and [`runs/20260918-080000-smollm2-docred-lora-smoke/env.json`](runs/20260918-080000-smollm2-docred-lora-smoke/env.json). The 5k QLoRA sweep selected r=16 for the next short-context local pilot under this config, based on [`runs/20260919-003400-smollm2-docred5k-qlora-r16/metrics.json`](runs/20260919-003400-smollm2-docred5k-qlora-r16/metrics.json); r=32 is not selected because [`runs/20260919-042300-smollm2-docred5k-qlora-r32/metrics.json`](runs/20260919-042300-smollm2-docred5k-qlora-r32/metrics.json) records `train_loss_finite` false. Native-context local QLoRA training at r=16 failed with `OutOfMemoryError` in [`runs/20260919-ctx8192-smollm2-qlora-r16-probe/metrics.json`](runs/20260919-ctx8192-smollm2-qlora-r16-probe/metrics.json), while 4096-token and 6144-token synthetic probes completed in [`runs/20260919-ctx4096-smollm2-qlora-r16-probe/metrics.json`](runs/20260919-ctx4096-smollm2-qlora-r16-probe/metrics.json) and [`runs/20260919-ctx6144-smollm2-qlora-r16-probe/metrics.json`](runs/20260919-ctx6144-smollm2-qlora-r16-probe/metrics.json). Run 8192-token GraphRAG capability pilots on Kaggle. The stock relation-extraction smoke improved from no parseable JSON under plain prompting to `strict_relation_f1` 0.07692307692307693 under chat one-shot prompting in [`runs/20260919-relation-smoke-smollm2-stock-chat-oneshot/metrics.json`](runs/20260919-relation-smoke-smollm2-stock-chat-oneshot/metrics.json), which is still not usable without task training and constrained decoding. The QLoRA rank sweeps, memory probes, and relation smoke runs are indexed in [`docs/RUN_LEDGER.md`](docs/RUN_LEDGER.md).
 
-Not done: no gold set, no Gate 0 baseline, no Qwen3 side-by-side pilot, no GraphRAG-specific SFT mixture, no Kaggle full fine-tune, and no gate metric.
+Not done: no gold set, no Gate 0 baseline, no optional Qwen3 comparison pilot, no GraphRAG-specific SFT mixture, no Kaggle full fine-tune, and no gate metric.
 
 The immediate critical path is the **gold set** — 200–500 hand-annotated examples from Kartik's own corpus. Everything else in Phase 1 is measured against it, so nothing downstream can start until it exists. See [`docs/DATA_STRATEGY.md`](docs/DATA_STRATEGY.md).
 
