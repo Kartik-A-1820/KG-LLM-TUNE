@@ -25,9 +25,11 @@ model:
   # Fallback if both underperform: Qwen/Qwen2.5-0.5B-Instruct
   # (prior feasibility assessment cites published extraction F1 0.828;
   # external figure, not ours)
-  max_context: 8192            # HARD budget for the 360M. Prompts must fit inside it.
+  max_context: 8192            # Native SmolLM2-360M-Instruct budget from Hugging Face AutoConfig.
   few_shot_examples: 2         # prior feasibility assessment: 0.527 zero-shot vs 0.735 2-shot
-  max_seq_len: 2048
+  # Use the full native context for GraphRAG capability pilots: extraction,
+  # reference-grounded QA, and context-aware summaries all need this budget.
+  max_seq_len: 8192
 
 train:
   strategy: full               # shipping recipe; gate numbers come from full FT

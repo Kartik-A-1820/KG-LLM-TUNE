@@ -62,13 +62,13 @@ Neither is a reason to change the choice. Both are planning constraints that mus
 
 So the Gate 1 throughput number must be measured with **the prompt that will actually ship**, demonstrations included. A throughput figure measured on a zero-shot prompt that production will not use is not a real number. Whether fine-tuning removes the few-shot dependence is itself a finding worth recording — that is part of what the pilot above answers.
 
-**2. 8k context is a hard planning constraint.** A ~1,200-token chunk plus 2-shot demonstrations plus the schema fits in 8k. It does not leave headroom for:
+**2. 8,192-token native context is a hard planning constraint.** Hugging Face `AutoConfig` for `HuggingFaceTB/SmolLM2-360M-Instruct` reports `max_position_embeddings` 8192. A ~1,200-token chunk plus 2-shot demonstrations plus the schema fits in 8192. It does not leave headroom for:
 
 - wider chunks
 - more than about two demonstrations
 - multi-round gleaning passes over the same chunk
 
-Treat 8k as a fixed budget that every prompt design must fit inside. Any Phase 2 design wanting larger chunks or gleanings has to either fit the budget or change model — and discovering that at Phase 2 is the expensive ordering.
+Treat 8192 as a fixed budget that every prompt design must fit inside. GraphRAG capability pilots should use the full native context because extraction, reference-grounded QA, and context-aware summarization need that headroom. Any Phase 2 design wanting larger chunks or gleanings has to either fit the budget or change model — and discovering that at Phase 2 is the expensive ordering.
 
 **Proceed only if fine-tuning has visible headroom** — that is, the gap between the stock primary and the teacher is large enough that closing most of it is worth the effort, *and* the 7B does not already solve the problem at acceptable local speed.
 

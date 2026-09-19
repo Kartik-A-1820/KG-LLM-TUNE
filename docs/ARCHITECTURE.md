@@ -112,11 +112,15 @@ Getting the training loop correct locally before spending a Kaggle session is **
 
 Parameter count is not what will blow the local 3.4 GB. **Attention memory at long sequence length is.**
 
+The selected primary model's native context budget is **8192 tokens**: Hugging Face `AutoConfig` for `HuggingFaceTB/SmolLM2-360M-Instruct` reports `max_position_embeddings` 8192. That is the target for GraphRAG capability pilots, because extraction, reference-grounded QA, and context-aware summarization all need the same long-context envelope the production flow will use.
+
 The 1650 Ti is SM 7.5, which **FlashAttention-2 does not support**. With naive attention, sequence length 4096 costs roughly **537 MB per layer** — which overruns the card regardless of how small the LoRA adapter is.
 
 This matters specifically for this project because GraphRAG extraction prompts are long: ~1,200-token chunks plus few-shot examples plus a schema. These are not 512-token training samples.
 
 **Requirement, not a suggestion:** local training must explicitly use **PyTorch SDPA's memory-efficient backend** or **xformers**. Enable it, and assert it is actually active — silently falling back to the naive path is the failure mode, because it fails as an OOM that looks like "the model is too big" rather than "attention picked the wrong kernel."
+
+If a local 8192-token training probe does not fit, do not silently shrink the GraphRAG capability pilot. Either move that pilot to Kaggle or label the shorter run as smoke-only.
 
 ### Kaggle notebook requirements
 

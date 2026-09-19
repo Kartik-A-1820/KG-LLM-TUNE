@@ -70,7 +70,7 @@ These came out of a completed feasibility assessment plus Kartik's explicit mode
 **Two 360M-specific risks that are planning constraints, not footnotes:**
 
 1. **Few-shot dependence.** The prior feasibility assessment records 0.527 F1 zero-shot vs 0.735 with 2-shot (external figures, not measured here). If demonstrations must stay in the production prompt, their tokens enter every chunk's context and **erode the throughput advantage that motivated the smaller model**. Gate 1 throughput must therefore be measured with the prompt that actually ships, demonstrations included.
-2. **8k context is a hard budget.** A ~1,200-token chunk plus 2-shot plus schema fits. There is no headroom for wider chunks, more shots, or gleaning passes. Every prompt design must fit inside 8k, or the model choice changes.
+2. **8,192 tokens is the native context budget.** Hugging Face `AutoConfig` for `HuggingFaceTB/SmolLM2-360M-Instruct` reports `max_position_embeddings` 8192. A ~1,200-token chunk plus 2-shot plus schema fits. There is no headroom for wider chunks, more shots, or gleaning passes. Every prompt design must fit inside 8192, or the model choice changes. GraphRAG capability pilots should target the full native context for extraction, reference-grounded QA, and context-aware summaries; shorter local runs are smoke-only unless explicitly labelled otherwise.
 
 **Embedding:** EmbeddingGemma-300M primary, with **potion-retrieval-32M as a serious A/B**, not a token alternative. potion is ~200× faster on CPU, and the hypothesis is that graph traversal carries enough of GraphRAG's retrieval load that the quality gap may not show up end to end. A/B is decided on end-to-end answer quality, not embedding-leaderboard scores.
 
