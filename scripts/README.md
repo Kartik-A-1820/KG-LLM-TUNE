@@ -1,8 +1,20 @@
 # scripts/
 
-Thin CLI entry points over `src/kg_llm_tune`. Argument parsing, config loading, and a call into the library — nothing else. Logic that lives here instead of in `src/` cannot be imported, tested, or reused from the Kaggle notebook.
+Research utilities and CLI entry points for dataset preparation, local pilot training, and evaluation. Production training logic should move into `src/kg_llm_tune` before it is reused by Kaggle.
 
-Every script takes `--config <path>` and writes into a timestamped run directory.
+## Available
+
+| Script | Does |
+| --- | --- |
+| `prepare_docred_sft.py` | Downloads and converts a seeded DocRED subset to the project extraction JSON shape |
+| `prepare_kuzu_pilot.py` | Combines DocRED extraction and Neo4j Text2Cypher rows into a hashed local pilot split |
+| `train_lora_smoke.py` | Local LoRA/QLoRA diagnostic trainer with progress metrics and optimizer/RNG/data-position checkpoints |
+| `probe_context_memory.py` | Measures local context-length memory behavior |
+| `evaluate_relation_smoke.py` | Scores relation triples on the small relation smoke fixture |
+| `smoke_train_loss.py` | Minimal training-loss smoke check |
+
+These local utilities are diagnostic. They do not produce Gate 0 or Gate 1 metrics.
+Install the pinned packages from `requirements.txt` using the repository's `.venv`; do not install them into the global Python environment.
 
 ## Planned
 
@@ -17,7 +29,7 @@ Every script takes `--config <path>` and writes into a timestamped run directory
 | `gate3_compare.py` | Build two graphs over the holdout (small model vs teacher), run the QA set through both, report quality ratio and indexing throughput |
 | `embedding_ab.py` | End-to-end embedding A/B over a fixed graph |
 
-None written yet.
+The planned production pipeline below remains unimplemented.
 
 ## Convention
 

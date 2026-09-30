@@ -1,0 +1,14 @@
+--extra-index-url https://download.pytorch.org/whl/cu128
+
+torch==2.11.0+cu128
+transformers==5.17.0
+peft==0.21.0
+accelerate==1.15.0
+bitsandbytes==0.50.2
+trl==1.13.0
+xgrammar==0.2.7
+pyarrow==25.0.1
+numpy==2.4.6
+PyYAML==6.0.3
+safetensors==0.8.0
+tokenizers==0.23.2

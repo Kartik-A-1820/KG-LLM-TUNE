@@ -33,6 +33,10 @@ It lives in `eval/gold/` and it is **committed**, subject to the corpus-export p
 
 Use these to test plumbing and pretrain the output format — **not** to define success and not as the main SFT mixture. They are different text from a different domain with a different schema.
 
+The current dataset decision for the fully local Kuzu-backed GraphRAG target is
+recorded in
+[`DATASET_DECISION_KUZU_GRAPHRAG.md`](DATASET_DECISION_KUZU_GRAPHRAG.md).
+
 The real training mix must be specific to the GraphRAG extraction/indexing flow:
 
 - entity extraction
