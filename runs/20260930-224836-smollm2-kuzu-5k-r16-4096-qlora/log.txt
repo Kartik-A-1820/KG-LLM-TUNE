@@ -17,3 +17,5 @@
 2026-10-01 02:11:51 {"elapsed_seconds": 12161.698, "epoch": 1, "optimizer_step": 100, "recent_train_loss": 0.2762104758992791, "train_input_tokens_per_second_wall": 82.701, "train_input_tokens_seen": 1005788}
 2026-10-01 02:26:06 {"elapsed_seconds": 13016.86, "epoch": 1, "optimizer_step": 110, "recent_train_loss": 0.23989585153758525, "train_input_tokens_per_second_wall": 84.739, "train_input_tokens_seen": 1103041}
 2026-10-01 02:43:44 {"elapsed_seconds": 14074.754, "epoch": 1, "optimizer_step": 120, "recent_train_loss": 0.2695243353489786, "train_input_tokens_per_second_wall": 85.661, "train_input_tokens_seen": 1205663}
+2026-10-01 02:59:21 {"elapsed_seconds": 15011.482, "epoch": 1, "optimizer_step": 130, "recent_train_loss": 0.3055622669868171, "train_input_tokens_per_second_wall": 87.406, "train_input_tokens_seen": 1312094}
+2026-10-01 03:16:28 {"elapsed_seconds": 16038.018, "epoch": 1, "optimizer_step": 140, "recent_train_loss": 0.2559291418641806, "train_input_tokens_per_second_wall": 88.307, "train_input_tokens_seen": 1416273}

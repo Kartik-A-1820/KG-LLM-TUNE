@@ -5,9 +5,9 @@
   "bnb_4bit_quant_type": "nf4",
   "bnb_4bit_use_double_quant": true,
   "chat_template": true,
-  "cuda_max_memory_allocated_bytes_so_far": 3758015488,
-  "cuda_max_memory_reserved_bytes_so_far": 8818524160,
-  "elapsed_seconds_so_far": 14074.754,
+  "cuda_max_memory_allocated_bytes_so_far": 3764619264,
+  "cuda_max_memory_reserved_bytes_so_far": 10185867264,
+  "elapsed_seconds_so_far": 16038.018,
   "gold_set_examples": 0,
   "gold_set_sha256": null,
   "gold_set_version": null,
@@ -24,7 +24,7 @@
   "model": "HuggingFaceTB/SmolLM2-360M-Instruct",
   "model_revision": "a10cc1512eabd3dde888204e902eca88bddb4951",
   "note": "Diagnostic local QLoRA/LoRA smoke only. Not a gate metric.",
-  "optimizer_steps": 120,
+  "optimizer_steps": 140,
   "parameter_count": 213218240,
   "progress": [
     {
@@ -122,6 +122,22 @@
       "recent_train_loss": 0.2695243353489786,
       "train_input_tokens_per_second_wall": 85.661,
       "train_input_tokens_seen": 1205663
+    },
+    {
+      "elapsed_seconds": 15011.482,
+      "epoch": 1,
+      "optimizer_step": 130,
+      "recent_train_loss": 0.3055622669868171,
+      "train_input_tokens_per_second_wall": 87.406,
+      "train_input_tokens_seen": 1312094
+    },
+    {
+      "elapsed_seconds": 16038.018,
+      "epoch": 1,
+      "optimizer_step": 140,
+      "recent_train_loss": 0.2559291418641806,
+      "train_input_tokens_per_second_wall": 88.307,
+      "train_input_tokens_seen": 1416273
     }
   ],
   "resume_events": [],
@@ -163,8 +179,8 @@
   },
   "train_completion_truncated_examples": 0,
   "train_examples": 5000,
-  "train_input_tokens_per_second_wall_so_far": 85.661,
-  "train_input_tokens_seen": 1205663,
+  "train_input_tokens_per_second_wall_so_far": 88.307,
+  "train_input_tokens_seen": 1416273,
   "train_prompt_truncated_examples": 0,
   "train_sequence_length_tokens": {
     "count": 5000,
