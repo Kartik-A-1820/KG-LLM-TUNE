@@ -173,7 +173,7 @@ Read `AGENTS.md` in full. The condensed version:
 
 ## 9. Current status
 
-**Phase 1, pre-Gate-0.** Scaffold plus local smoke plumbing.
+**Phase 1, pre-Gate-0.** Scaffold plus local smoke plumbing. A 5,000-row r=16 QLoRA diagnostic pilot at a 4,096-token cap is currently running locally: `runs/20260930-224836-smollm2-kuzu-5k-r16-4096-qlora/`. The run's committed-at-launch config and environment are in that directory; the baseline validation had not completed when this status was recorded, so there are no training metrics or optimizer steps to report yet. Check the live log and process before starting or stopping any GPU job. Keep this run explicitly diagnostic; the gold set and task coverage needed for a gate are still absent.
 
 Done: repo created, full document scaffold written (README, AGENTS.md, `docs/PHASE1_GOALS.md`, `docs/ARCHITECTURE.md`, `docs/DATA_STRATEGY.md`, `docs/BLOCKERS.md`, `docs/BENCHMARKING_PROTOCOL.md`, `docs/RUN_LEDGER.md`), directory structure with purpose READMEs, `.gitignore`, example configs for both the Kaggle full-FT run and the local LoRA run, DocRED open-data format-bootstrap pull, repo-local venv on `D:`, one tiny SmolLM2-360M local LoRA smoke run, one tiny QLoRA rank sweep over r=8, r=16, and r=32, one 5k-example QLoRA rank sweep over r=8, r=16, and r=32, three context memory probes, a stock relation-extraction smoke test, and preparation of a local diagnostic mix from DocRED plus Neo4j Text2Cypher with source hashes.
 
