@@ -7,3 +7,4 @@
 2026-09-30 23:46:14 epoch 1 started
 2026-10-01 00:03:09 {"elapsed_seconds": 4439.808, "epoch": 1, "optimizer_step": 10, "recent_train_loss": 0.598856284096837, "train_input_tokens_per_second_wall": 22.729, "train_input_tokens_seen": 100912}
 2026-10-01 00:15:30 {"elapsed_seconds": 5180.036, "epoch": 1, "optimizer_step": 20, "recent_train_loss": 0.5272951163351536, "train_input_tokens_per_second_wall": 37.869, "train_input_tokens_seen": 196163}
+2026-10-01 00:28:49 {"elapsed_seconds": 5979.037, "epoch": 1, "optimizer_step": 30, "recent_train_loss": 0.43922036960721017, "train_input_tokens_per_second_wall": 49.969, "train_input_tokens_seen": 298769}

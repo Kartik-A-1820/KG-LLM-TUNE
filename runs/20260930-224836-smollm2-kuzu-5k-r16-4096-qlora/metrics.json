@@ -7,7 +7,7 @@
   "chat_template": true,
   "cuda_max_memory_allocated_bytes_so_far": 3732557824,
   "cuda_max_memory_reserved_bytes_so_far": 7451181056,
-  "elapsed_seconds_so_far": 5180.036,
+  "elapsed_seconds_so_far": 5979.037,
   "gold_set_examples": 0,
   "gold_set_sha256": null,
   "gold_set_version": null,
@@ -24,7 +24,7 @@
   "model": "HuggingFaceTB/SmolLM2-360M-Instruct",
   "model_revision": "a10cc1512eabd3dde888204e902eca88bddb4951",
   "note": "Diagnostic local QLoRA/LoRA smoke only. Not a gate metric.",
-  "optimizer_steps": 20,
+  "optimizer_steps": 30,
   "parameter_count": 213218240,
   "progress": [
     {
@@ -42,6 +42,14 @@
       "recent_train_loss": 0.5272951163351536,
       "train_input_tokens_per_second_wall": 37.869,
       "train_input_tokens_seen": 196163
+    },
+    {
+      "elapsed_seconds": 5979.037,
+      "epoch": 1,
+      "optimizer_step": 30,
+      "recent_train_loss": 0.43922036960721017,
+      "train_input_tokens_per_second_wall": 49.969,
+      "train_input_tokens_seen": 298769
     }
   ],
   "resume_events": [],
@@ -83,8 +91,8 @@
   },
   "train_completion_truncated_examples": 0,
   "train_examples": 5000,
-  "train_input_tokens_per_second_wall_so_far": 37.869,
-  "train_input_tokens_seen": 196163,
+  "train_input_tokens_per_second_wall_so_far": 49.969,
+  "train_input_tokens_seen": 298769,
   "train_prompt_truncated_examples": 0,
   "train_sequence_length_tokens": {
     "count": 5000,
