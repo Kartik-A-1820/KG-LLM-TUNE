@@ -1,0 +1,192 @@
+{
+  "attn_implementation_active": "sdpa",
+  "attn_implementation_requested": "sdpa",
+  "batch_size": 2,
+  "bnb_4bit_quant_type": "nf4",
+  "bnb_4bit_use_double_quant": true,
+  "chat_template": true,
+  "cuda_max_memory_allocated_bytes": 751010304,
+  "cuda_max_memory_allocated_bytes_so_far": 751010304,
+  "cuda_max_memory_reserved_bytes": 868220928,
+  "cuda_max_memory_reserved_bytes_so_far": 868220928,
+  "cuda_mem_free_bytes_at_end": 2557214720,
+  "cuda_mem_total_bytes_at_end": 4294639616,
+  "elapsed_seconds": 42.712,
+  "elapsed_seconds_current_session": 16.472,
+  "elapsed_seconds_so_far": 39.915,
+  "final_val_loss": 1.0746839046478271,
+  "gold_set_examples": 0,
+  "gold_set_sha256": null,
+  "gold_set_version": null,
+  "grad_accum_steps": 1,
+  "initial_val_loss": 1.6742852330207825,
+  "initial_val_loss_by_task": {
+    "cypher_generation": 1.9019805192947388,
+    "graph_extraction": 1.5719033479690552
+  },
+  "lora_alpha": 32,
+  "lora_r": 16,
+  "losses": [
+    {
+      "epoch": 1,
+      "optimizer_steps": 8,
+      "train_loss": 1.7812404781579971,
+      "val_loss": 1.4075977206230164,
+      "val_loss_by_task": {
+        "cypher_generation": 1.7122021913528442,
+        "graph_extraction": 1.2708377838134766
+      }
+    },
+    {
+      "epoch": 2,
+      "optimizer_steps": 16,
+      "train_loss": 1.3874014019966125,
+      "val_loss": 1.0746839046478271,
+      "val_loss_by_task": {
+        "cypher_generation": 1.467880368232727,
+        "graph_extraction": 0.8985689878463745
+      }
+    }
+  ],
+  "max_length": 128,
+  "model": "HuggingFaceTB/SmolLM2-360M-Instruct",
+  "note": "Diagnostic local QLoRA/LoRA smoke only. Not a gate metric.",
+  "optimizer_steps": 16,
+  "parameter_count": 213218240,
+  "progress": [
+    {
+      "elapsed_seconds": 7.007,
+      "epoch": 1,
+      "optimizer_step": 2,
+      "recent_train_loss": 1.845770537853241,
+      "train_input_tokens_per_second_wall": 73.067,
+      "train_input_tokens_seen": 512
+    },
+    {
+      "elapsed_seconds": 11.312,
+      "epoch": 1,
+      "optimizer_step": 4,
+      "recent_train_loss": 2.1098738312721252,
+      "train_input_tokens_per_second_wall": 90.527,
+      "train_input_tokens_seen": 1024
+    },
+    {
+      "elapsed_seconds": 15.574,
+      "epoch": 1,
+      "optimizer_step": 6,
+      "recent_train_loss": 1.455629050731659,
+      "train_input_tokens_per_second_wall": 98.624,
+      "train_input_tokens_seen": 1536
+    },
+    {
+      "elapsed_seconds": 20.025,
+      "epoch": 1,
+      "optimizer_step": 8,
+      "recent_train_loss": 1.7136884927749634,
+      "train_input_tokens_per_second_wall": 102.271,
+      "train_input_tokens_seen": 2048
+    },
+    {
+      "elapsed_seconds": 27.095,
+      "epoch": 2,
+      "optimizer_step": 10,
+      "recent_train_loss": 1.3987110257148743,
+      "train_input_tokens_per_second_wall": 94.483,
+      "train_input_tokens_seen": 2560
+    },
+    {
+      "elapsed_seconds": 30.988,
+      "epoch": 2,
+      "optimizer_step": 12,
+      "recent_train_loss": 1.3739171624183655,
+      "train_input_tokens_per_second_wall": 99.135,
+      "train_input_tokens_seen": 3072
+    },
+    {
+      "elapsed_seconds": 35.31,
+      "epoch": 2,
+      "optimizer_step": 14,
+      "recent_train_loss": 1.2973553538322449,
+      "train_input_tokens_per_second_wall": 101.501,
+      "train_input_tokens_seen": 3584
+    },
+    {
+      "elapsed_seconds": 39.915,
+      "epoch": 2,
+      "optimizer_step": 16,
+      "recent_train_loss": 1.4796220660209656,
+      "train_input_tokens_per_second_wall": 102.618,
+      "train_input_tokens_seen": 4096
+    }
+  ],
+  "resume_events": [
+    {
+      "checkpoint": "step-00000010",
+      "epoch": 2,
+      "next_batch_idx": 2,
+      "optimizer_steps": 10
+    }
+  ],
+  "seed": 1820,
+  "source_dataset": "docred-distant+neo4j-text2cypher-2024v1",
+  "source_license": "MIT-and-Apache-2.0-upstream-review-open",
+  "source_manifest": {
+    "docred_source": "thunlp/docred train_distant split, MIT",
+    "docred_train_sha256": "d2672b589d055f468bdcabb49f946dae8696e88bd329038a066dc65b5a16a477",
+    "docred_val_sha256": "23451fc02cd905f8f175c06f3594ba8881bcc582a4d52e5ecbac2df50acb0338",
+    "limitation": "Cypher rows retain Neo4j syntax and are not yet validated against Kuzu; mix covers two capabilities only.",
+    "seed": 1820,
+    "text2cypher_license": "Apache-2.0 on dataset card; source component terms not independently reviewed",
+    "text2cypher_revision": "d9f15541ab2f99a0f54797a0109b50663554f512",
+    "text2cypher_source": "https://huggingface.co/datasets/neo4j/text2cypher-2024v1",
+    "text2cypher_test_sha256": "948ae94e4a4345b0fdc7b27f77383a2b68471552d15d7fc8473a4448d8eb502f",
+    "text2cypher_test_url": "https://huggingface.co/datasets/neo4j/text2cypher-2024v1/resolve/d9f15541ab2f99a0f54797a0109b50663554f512/data/test-00000-of-00001.parquet",
+    "text2cypher_train_sha256": "12218000576ed793e468417333b4499517c3d7869c94504941c6741acc229bce",
+    "text2cypher_train_url": "https://huggingface.co/datasets/neo4j/text2cypher-2024v1/resolve/d9f15541ab2f99a0f54797a0109b50663554f512/data/train-00000-of-00001.parquet",
+    "train_examples": 5000,
+    "train_sha256": "bac68fac9dd7ff1938f64cffd6c98d1fd4b3cd4c64728a957cd44fe2fac180b2",
+    "train_task_counts": {
+      "cypher_generation": 1500,
+      "graph_extraction": 3500
+    },
+    "val_examples": 500,
+    "val_sha256": "c1a6238a3f2f4d89327040c2630cd6e11abdceeda14feb3f5a9a90e8a4f790cb",
+    "val_task_counts": {
+      "cypher_generation": 150,
+      "graph_extraction": 350
+    }
+  },
+  "source_train_sha256": "bac68fac9dd7ff1938f64cffd6c98d1fd4b3cd4c64728a957cd44fe2fac180b2",
+  "source_val_sha256": "c1a6238a3f2f4d89327040c2630cd6e11abdceeda14feb3f5a9a90e8a4f790cb",
+  "status": "complete",
+  "task_counts": {
+    "cypher_generation": 5,
+    "graph_extraction": 11
+  },
+  "train_completion_truncated_examples": 12,
+  "train_examples": 16,
+  "train_input_tokens_per_second_wall": 248.666,
+  "train_input_tokens_per_second_wall_so_far": 102.618,
+  "train_input_tokens_seen": 4096,
+  "train_prompt_truncated_examples": 16,
+  "train_sequence_length_tokens": {
+    "count": 16,
+    "max": 128,
+    "median": 128,
+    "min": 128,
+    "p95": 128
+  },
+  "trainable_parameter_count": 8683520,
+  "training_mode": "qlora",
+  "val_completion_truncated_examples": 2,
+  "val_examples": 4,
+  "val_loss_delta": -0.5996013283729553,
+  "val_prompt_truncated_examples": 4,
+  "val_sequence_length_tokens": {
+    "count": 4,
+    "max": 128,
+    "median": 128,
+    "min": 128,
+    "p95": 128
+  }
+}

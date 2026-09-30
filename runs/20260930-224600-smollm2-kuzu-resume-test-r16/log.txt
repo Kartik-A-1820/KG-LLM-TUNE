@@ -1,0 +1,27 @@
+2026-09-30 22:44:20 run started
+2026-09-30 22:44:20 loading tokenizer HuggingFaceTB/SmolLM2-360M-Instruct
+2026-09-30 22:44:22 reading data
+2026-09-30 22:44:22 loading model qlora=True
+2026-09-30 22:44:25 trainable params 8683520
+2026-09-30 22:44:25 evaluating initial validation loss
+2026-09-30 22:44:28 epoch 1 started
+2026-09-30 22:44:32 {"elapsed_seconds": 7.007, "epoch": 1, "optimizer_step": 2, "recent_train_loss": 1.845770537853241, "train_input_tokens_per_second_wall": 73.067, "train_input_tokens_seen": 512}
+2026-09-30 22:44:36 {"elapsed_seconds": 11.312, "epoch": 1, "optimizer_step": 4, "recent_train_loss": 2.1098738312721252, "train_input_tokens_per_second_wall": 90.527, "train_input_tokens_seen": 1024}
+2026-09-30 22:44:41 {"elapsed_seconds": 15.574, "epoch": 1, "optimizer_step": 6, "recent_train_loss": 1.455629050731659, "train_input_tokens_per_second_wall": 98.624, "train_input_tokens_seen": 1536}
+2026-09-30 22:44:45 {"elapsed_seconds": 20.025, "epoch": 1, "optimizer_step": 8, "recent_train_loss": 1.7136884927749634, "train_input_tokens_per_second_wall": 102.271, "train_input_tokens_seen": 2048}
+2026-09-30 22:44:47 epoch 1 val_loss 1.4075977206230164
+2026-09-30 22:44:48 epoch 2 started
+2026-09-30 22:44:52 {"elapsed_seconds": 27.095, "epoch": 2, "optimizer_step": 10, "recent_train_loss": 1.3987110257148743, "train_input_tokens_per_second_wall": 94.483, "train_input_tokens_seen": 2560}
+2026-09-30 22:45:16 run started
+2026-09-30 22:45:16 loading tokenizer HuggingFaceTB/SmolLM2-360M-Instruct
+2026-09-30 22:45:17 reading data
+2026-09-30 22:45:17 loading model qlora=True
+2026-09-30 22:45:22 trainable params 8683520
+2026-09-30 22:45:22 evaluating initial validation loss
+2026-09-30 22:45:22 resumed optimizer_step 10 epoch 2 batch 2
+2026-09-30 22:45:22 epoch 2 started
+2026-09-30 22:45:27 {"elapsed_seconds": 30.988, "epoch": 2, "optimizer_step": 12, "recent_train_loss": 1.3739171624183655, "train_input_tokens_per_second_wall": 99.135, "train_input_tokens_seen": 3072}
+2026-09-30 22:45:31 {"elapsed_seconds": 35.31, "epoch": 2, "optimizer_step": 14, "recent_train_loss": 1.2973553538322449, "train_input_tokens_per_second_wall": 101.501, "train_input_tokens_seen": 3584}
+2026-09-30 22:45:35 {"elapsed_seconds": 39.915, "epoch": 2, "optimizer_step": 16, "recent_train_loss": 1.4796220660209656, "train_input_tokens_per_second_wall": 102.618, "train_input_tokens_seen": 4096}
+2026-09-30 22:45:37 epoch 2 val_loss 1.0746839046478271
+2026-09-30 22:45:39 run complete
