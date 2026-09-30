@@ -22,6 +22,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", default="HuggingFaceTB/SmolLM2-360M-Instruct")
+    parser.add_argument("--model-revision", default="a10cc1512eabd3dde888204e902eca88bddb4951")
     parser.add_argument("--train-jsonl", required=True)
     parser.add_argument("--val-jsonl", required=True)
     parser.add_argument("--source-dataset", default=None)
@@ -168,6 +169,7 @@ def restore_rng(state: dict[str, Any]) -> None:
 def checkpoint_signature(args: argparse.Namespace, train_path: Path, val_path: Path) -> dict[str, Any]:
     return {
         "model": args.model,
+        "model_revision": args.model_revision,
         "seed": args.seed,
         "epochs": args.epochs,
         "max_length": args.max_length,
@@ -371,7 +373,7 @@ def main() -> None:
         write_json(output_dir / "env.json", environment)
 
     append_log(output_dir, f"loading tokenizer {args.model}")
-    tokenizer = AutoTokenizer.from_pretrained(args.model)
+    tokenizer = AutoTokenizer.from_pretrained(args.model, revision=args.model_revision)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
@@ -418,6 +420,7 @@ def main() -> None:
 
     base_model = AutoModelForCausalLM.from_pretrained(
         args.model,
+        revision=args.model_revision,
         attn_implementation=args.attn_implementation,
         **model_kwargs,
     )
@@ -460,6 +463,7 @@ def main() -> None:
         "status": "running",
         "note": "Diagnostic local QLoRA/LoRA smoke only. Not a gate metric.",
         "model": args.model,
+        "model_revision": args.model_revision,
         "source_dataset": args.source_dataset,
         "source_license": args.source_license,
         "source_manifest": (
