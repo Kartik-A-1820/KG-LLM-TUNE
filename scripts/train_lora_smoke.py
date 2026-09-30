@@ -96,11 +96,12 @@ def encode_row(
     if use_chat_template:
         if not tokenizer.chat_template:
             raise ValueError("--chat-template requested but tokenizer has no chat template")
-        prompt_ids = tokenizer.apply_chat_template(
+        chat_prompt = tokenizer.apply_chat_template(
             [{"role": "user", "content": prompt}],
-            tokenize=True,
+            tokenize=False,
             add_generation_prompt=True,
         )
+        prompt_ids = tokenizer(chat_prompt, add_special_tokens=False)["input_ids"]
     else:
         prompt_ids = tokenizer(prompt, add_special_tokens=False)["input_ids"]
     completion_ids = tokenizer(completion, add_special_tokens=False)["input_ids"]
