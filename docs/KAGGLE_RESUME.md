@@ -7,14 +7,14 @@ the base SmolLM2 weights or any raw source datasets.
 
 ## Upload Once
 
-Create one **private** Kaggle Dataset and upload this directory structure:
+Create one **private** Kaggle Dataset. The three JSON files are already
+uploaded to yours; add `kg-llm-tune-resume-step-00000400.zip` from
+`D:\KG-LLM-TUNE-KAGGLE-UPLOAD\`. That archive contains this resume structure
+(the dataset itself keeps `train.jsonl`, `val.jsonl`, and `manifest.json` at its
+top level):
 
 ```text
-kg-llm-tune-pilot/
-  kuzu_graphrag_v1/
-    train.jsonl
-    val.jsonl
-    manifest.json
+kg-llm-tune-resume-step-00000400.zip
   resume_bundle/
     config.yaml
     env.json
@@ -28,12 +28,11 @@ kg-llm-tune-pilot/
           adapter_config.json
           adapter_model.safetensors
           README.md
-  README.md (optional)
 ```
 
 The data files come from `data/open_pilots/kuzu_graphrag_v1/`. The resume files
-come from `runs/20260930-224836-smollm2-kuzu-5k-r16-4096-qlora/`. Upload every
-file under `step-00000400/adapter/` if that exact file list differs. The
+come from `runs/20260930-224836-smollm2-kuzu-5k-r16-4096-qlora/`. The archive
+contains every file under `step-00000400/adapter/`. The
 essential training state is `state.pt`
 (optimizer, scaler, RNG, epoch, batch position, and counters), together with
 the adapter and both manifests. Config, environment, metrics, and log files are
