@@ -49,6 +49,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--keep-last-checkpoints", type=int, default=2)
     parser.add_argument("--resume-from", default=None)
     parser.add_argument("--log-every-steps", type=int, default=10)
+    parser.add_argument("--max-run-seconds", type=int, default=0)
     parser.add_argument("--save-adapter", action="store_true")
     return parser.parse_args()
 
@@ -509,6 +510,7 @@ def main() -> None:
     append_log(output_dir, "evaluating initial validation loss")
     train_input_tokens_seen = 0
     previous_elapsed = 0.0
+    time_limit_reached = False
     try:
         metrics_path = output_dir / "metrics.json"
         if args.resume_from:
@@ -529,6 +531,8 @@ def main() -> None:
             if metrics_path.exists():
                 metrics = json.loads(metrics_path.read_text(encoding="utf-8"))
             metrics["status"] = "running"
+            metrics.pop("stop_reason", None)
+            metrics.pop("paused_at_optimizer_step", None)
             metrics.setdefault("resume_events", []).append({
                 "checkpoint": Path(args.resume_from).name,
                 "optimizer_steps": step,
@@ -584,14 +588,26 @@ def main() -> None:
                     scaler.update()
                     optimizer.zero_grad(set_to_none=True)
                     step += 1
-                    if args.checkpoint_every_steps > 0 and step % args.checkpoint_every_steps == 0:
+                    session_elapsed = time.time() - start
+                    time_limit_reached = (
+                        args.max_run_seconds > 0
+                        and session_elapsed >= args.max_run_seconds
+                    )
+                    checkpoint_due = (
+                        args.checkpoint_every_steps > 0
+                        and step % args.checkpoint_every_steps == 0
+                    )
+                    if checkpoint_due or time_limit_reached:
                         save_checkpoint(
                             model, optimizer, scaler, output_dir, signature,
                             epoch, batch_idx + 1, step, args,
                             train_input_tokens_seen, train_losses,
                             previous_elapsed + time.time() - start,
                         )
-                    if args.log_every_steps > 0 and step % args.log_every_steps == 0:
+                    should_log = (
+                        args.log_every_steps > 0 and step % args.log_every_steps == 0
+                    ) or time_limit_reached
+                    if should_log:
                         elapsed = previous_elapsed + time.time() - start
                         window_start = max(0, len(train_losses) - args.log_every_steps * args.grad_accum_steps)
                         recent_loss = sum(train_losses[window_start:]) / max(
@@ -619,7 +635,17 @@ def main() -> None:
                         }
                         metrics["progress"].append(progress)
                         append_log(output_dir, json.dumps(progress, sort_keys=True))
+                        if time_limit_reached:
+                            metrics["status"] = "paused"
+                            metrics["stop_reason"] = "max_run_seconds"
+                            metrics["paused_at_optimizer_step"] = step
+                            append_log(output_dir, f"time limit reached; checkpoint saved at optimizer_step {step}")
                         write_json(output_dir / "metrics.json", metrics)
+                    if time_limit_reached:
+                        break
+
+            if time_limit_reached:
+                break
 
             val_loss = evaluate(model, val_batches, device)
             val_loss_by_task = {
@@ -643,10 +669,13 @@ def main() -> None:
             )
             resume_batch_idx = 0
 
-        final_val = metrics["losses"][-1]["val_loss"] if metrics["losses"] else initial_val
-        metrics["status"] = "complete"
-        metrics["final_val_loss"] = final_val
-        metrics["val_loss_delta"] = final_val - initial_val
+        if time_limit_reached:
+            append_log(output_dir, f"run paused at optimizer_step {step}; resume from latest checkpoint")
+        else:
+            final_val = metrics["losses"][-1]["val_loss"] if metrics["losses"] else initial_val
+            metrics["status"] = "complete"
+            metrics["final_val_loss"] = final_val
+            metrics["val_loss_delta"] = final_val - initial_val
     except Exception as exc:
         metrics["status"] = "failed"
         metrics["failure_type"] = type(exc).__name__
@@ -672,7 +701,8 @@ def main() -> None:
         model.save_pretrained(adapter_dir)
         tokenizer.save_pretrained(adapter_dir)
 
-    append_log(output_dir, "run complete")
+    if metrics["status"] == "complete":
+        append_log(output_dir, "run complete")
     print(json.dumps(metrics, indent=2, sort_keys=True))
 
 

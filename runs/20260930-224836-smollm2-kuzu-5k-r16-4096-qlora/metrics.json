@@ -7,7 +7,7 @@
   "chat_template": true,
   "cuda_max_memory_allocated_bytes_so_far": 3789173248,
   "cuda_max_memory_reserved_bytes_so_far": 10873733120,
-  "elapsed_seconds_so_far": 37571.07,
+  "elapsed_seconds_so_far": 77851.592,
   "gold_set_examples": 0,
   "gold_set_sha256": null,
   "gold_set_version": null,
@@ -24,8 +24,9 @@
   "model": "HuggingFaceTB/SmolLM2-360M-Instruct",
   "model_revision": "a10cc1512eabd3dde888204e902eca88bddb4951",
   "note": "Diagnostic local QLoRA/LoRA smoke only. Not a gate metric.",
-  "optimizer_steps": 360,
+  "optimizer_steps": 400,
   "parameter_count": 213218240,
+  "paused_at_optimizer_step": 400,
   "progress": [
     {
       "elapsed_seconds": 4439.808,
@@ -314,6 +315,38 @@
       "recent_train_loss": 0.20422642691992224,
       "train_input_tokens_per_second_wall": 95.403,
       "train_input_tokens_seen": 3584407
+    },
+    {
+      "elapsed_seconds": 38706.157,
+      "epoch": 1,
+      "optimizer_step": 370,
+      "recent_train_loss": 0.23400815650820733,
+      "train_input_tokens_per_second_wall": 95.186,
+      "train_input_tokens_seen": 3684302
+    },
+    {
+      "elapsed_seconds": 40069.154,
+      "epoch": 1,
+      "optimizer_step": 380,
+      "recent_train_loss": 0.20962914149276912,
+      "train_input_tokens_per_second_wall": 94.437,
+      "train_input_tokens_seen": 3783997
+    },
+    {
+      "elapsed_seconds": 41234.256,
+      "epoch": 1,
+      "optimizer_step": 390,
+      "recent_train_loss": 0.1679117986932397,
+      "train_input_tokens_per_second_wall": 94.24,
+      "train_input_tokens_seen": 3885936
+    },
+    {
+      "elapsed_seconds": 77851.592,
+      "epoch": 1,
+      "optimizer_step": 400,
+      "recent_train_loss": 0.19194609788246453,
+      "train_input_tokens_per_second_wall": 51.244,
+      "train_input_tokens_seen": 3989431
     }
   ],
   "resume_events": [],
@@ -348,15 +381,16 @@
   },
   "source_train_sha256": "bac68fac9dd7ff1938f64cffd6c98d1fd4b3cd4c64728a957cd44fe2fac180b2",
   "source_val_sha256": "c1a6238a3f2f4d89327040c2630cd6e11abdceeda14feb3f5a9a90e8a4f790cb",
-  "status": "running",
+  "status": "paused",
+  "stop_reason": "external_pause_after_checkpoint",
   "task_counts": {
     "cypher_generation": 1500,
     "graph_extraction": 3500
   },
   "train_completion_truncated_examples": 0,
   "train_examples": 5000,
-  "train_input_tokens_per_second_wall_so_far": 95.403,
-  "train_input_tokens_seen": 3584407,
+  "train_input_tokens_per_second_wall_so_far": 51.244,
+  "train_input_tokens_seen": 3989431,
   "train_prompt_truncated_examples": 0,
   "train_sequence_length_tokens": {
     "count": 5000,
@@ -377,4 +411,4 @@
     "min": 151,
     "p95": 2166
   }
-}
+}\n
