@@ -40,3 +40,4 @@
 2026-10-01 08:19:19 {"elapsed_seconds": 34209.099, "epoch": 1, "optimizer_step": 330, "recent_train_loss": 0.2336497318930924, "train_input_tokens_per_second_wall": 96.204, "train_input_tokens_seen": 3291045}
 2026-10-01 08:37:24 {"elapsed_seconds": 35294.86, "epoch": 1, "optimizer_step": 340, "recent_train_loss": 0.19545841356739402, "train_input_tokens_per_second_wall": 95.951, "train_input_tokens_seen": 3386593}
 2026-10-01 08:55:11 {"elapsed_seconds": 36361.855, "epoch": 1, "optimizer_step": 350, "recent_train_loss": 0.21894339784048497, "train_input_tokens_per_second_wall": 95.799, "train_input_tokens_seen": 3483440}
+2026-10-01 09:15:21 {"elapsed_seconds": 37571.07, "epoch": 1, "optimizer_step": 360, "recent_train_loss": 0.20422642691992224, "train_input_tokens_per_second_wall": 95.403, "train_input_tokens_seen": 3584407}
