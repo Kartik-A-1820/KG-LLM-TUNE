@@ -346,6 +346,7 @@ def length_summary(rows: list[dict[str, torch.Tensor]]) -> dict[str, int | float
 
 def main() -> None:
     args = parse_args()
+    session_start = time.time()
     if not torch.cuda.is_available():
         raise SystemExit("CUDA is required for the local SmolLM2 LoRA smoke run.")
 
@@ -588,10 +589,9 @@ def main() -> None:
                     scaler.update()
                     optimizer.zero_grad(set_to_none=True)
                     step += 1
-                    session_elapsed = time.time() - start
                     time_limit_reached = (
                         args.max_run_seconds > 0
-                        and session_elapsed >= args.max_run_seconds
+                        and time.time() - session_start >= args.max_run_seconds
                     )
                     checkpoint_due = (
                         args.checkpoint_every_steps > 0
