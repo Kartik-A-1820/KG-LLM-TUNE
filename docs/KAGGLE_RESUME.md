@@ -27,6 +27,7 @@ kg-llm-tune-pilot/
         adapter/
           adapter_config.json
           adapter_model.safetensors
+          README.md
   README.md (optional)
 ```
 
