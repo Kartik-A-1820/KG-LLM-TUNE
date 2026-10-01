@@ -74,7 +74,8 @@ committed to GitHub.
 
 Kaggle documents a 12-hour maximum for CPU/GPU notebook sessions and up to 20
 GB of saved `/kaggle/working` output. The notebook enforces a shorter 10-hour
-budget, reserves time for startup, and checkpoints on the first optimizer step
+budget, reserves 15 minutes for final artifact construction and notebook save,
+and checkpoints on the first optimizer step
 at or after its deadline. The watchdog starts on the first executed notebook
 cell, so select the GPU and start running promptly. Save Version must complete
 after the final ZIP verification; check that the ZIP appears in notebook output
