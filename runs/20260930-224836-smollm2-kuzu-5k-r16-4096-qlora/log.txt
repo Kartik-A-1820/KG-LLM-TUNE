@@ -33,3 +33,5 @@
 2026-10-01 06:14:55 {"elapsed_seconds": 26745.184, "epoch": 1, "optimizer_step": 260, "recent_train_loss": 0.23497378760948778, "train_input_tokens_per_second_wall": 96.732, "train_input_tokens_seen": 2587112}
 2026-10-01 06:28:43 {"elapsed_seconds": 27572.962, "epoch": 1, "optimizer_step": 270, "recent_train_loss": 0.22231060769408942, "train_input_tokens_per_second_wall": 97.366, "train_input_tokens_seen": 2684669}
 2026-10-01 06:46:19 {"elapsed_seconds": 28629.692, "epoch": 1, "optimizer_step": 280, "recent_train_loss": 0.21119197090156377, "train_input_tokens_per_second_wall": 97.263, "train_input_tokens_seen": 2784597}
+2026-10-01 07:04:39 {"elapsed_seconds": 29729.792, "epoch": 1, "optimizer_step": 290, "recent_train_loss": 0.25857829190790654, "train_input_tokens_per_second_wall": 97.082, "train_input_tokens_seen": 2886238}
+2026-10-01 07:22:58 {"elapsed_seconds": 30828.134, "epoch": 1, "optimizer_step": 300, "recent_train_loss": 0.23514794586226345, "train_input_tokens_per_second_wall": 96.921, "train_input_tokens_seen": 2987894}
