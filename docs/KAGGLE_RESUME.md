@@ -52,19 +52,33 @@ commit and fetching the base model. Select a GPU accelerator.
 
 ## Later Sessions
 
-After a session pauses, save a Kaggle notebook version so its
-`/kaggle/working/kaggle_resume_bundle` output is retained. Attach that notebook
-output as an input on the next session, alongside the original private data
-dataset. The notebook searches attached inputs for complete checkpoints,
-validates the checkpoint's training and validation data hashes, and resumes
-from the highest complete matching optimizer step. Each session writes the
-next bundle under `/kaggle/working/kaggle_resume_bundle`.
+After each session pauses, the final notebook cell writes exactly one portable
+artifact, `/kaggle/working/kg-llm-tune-resume-step-NNNNNNNN.zip`, where the
+number is the saved optimizer step. It contains the run configuration,
+environment, metrics and logs; adapter weights; checkpoint manifest; and
+`state.pt` (optimizer/scaler, RNG states, epoch, next batch and counters). An
+artifact manifest records every payload file's size and SHA-256, plus model and
+source-commit identity. The notebook verifies the ZIP CRCs, required members,
+and all payload hashes before reporting success. The ZIP is written atomically;
+an incomplete archive is not published at the target path.
+
+Use Kaggle **Save Version** after the notebook run to retain that ZIP in the
+notebook output. For continuity independent of the notebook version, download
+that single ZIP and add it to a new **private Kaggle Dataset**. On the next run,
+attach that private resume dataset and the original private data dataset. The
+notebook safely extracts every attached `kg-llm-tune-resume-*.zip`, validates
+the train/validation hashes against the original dataset, and resumes from the
+highest complete matching optimizer step. The newly produced ZIP is the sole
+resume artifact to carry forward; no model weights or datasets need to be
+committed to GitHub.
 
 Kaggle documents a 12-hour maximum for CPU/GPU notebook sessions and up to 20
 GB of saved `/kaggle/working` output. The notebook enforces a shorter 10-hour
 budget, reserves time for startup, and checkpoints on the first optimizer step
 at or after its deadline. The watchdog starts on the first executed notebook
-cell, so select the GPU and start running promptly. See the [Kaggle notebook
+cell, so select the GPU and start running promptly. Save Version must complete
+after the final ZIP verification; check that the ZIP appears in notebook output
+before ending the session. See the [Kaggle notebook
 runtime documentation](https://www.kaggle.com/docs/notebooks).
 
 This checkpoint is a diagnostic run, not a production-ready Kuzu model. Its
