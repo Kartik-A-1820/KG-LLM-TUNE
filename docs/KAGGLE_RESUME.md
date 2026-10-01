@@ -48,7 +48,21 @@ Do **not** upload:
 - Kaggle credentials or any access token.
 
 Enable Internet in the Kaggle notebook settings for cloning the pinned project
-commit and fetching the base model. Select a GPU accelerator.
+commit and fetching the base model. Select **GPU T4 x2**: the notebook starts
+one DDP worker on each GPU. The per-GPU microbatch remains 1 at 4,096 tokens to
+control activation memory; gradient accumulation is 4, giving an effective
+global batch of 8, the same as the prior single-GPU setting (batch 1 with
+accumulation 8). Increasing the per-GPU microbatch is not assumed to be faster
+or safe without a measured memory/throughput comparison.
+
+The trainer allows a narrowly checked migration from the saved world-size-1
+checkpoint: all model, data, sequence-length, LoRA, optimizer and effective
+global-batch settings must match, and the notebook opts into that migration
+explicitly. DDP shards deterministic global batches across the two workers and
+saves per-rank RNG state for subsequent two-GPU resumes. This is an unvalidated
+runtime change until a Kaggle checkpoint is successfully resumed and both GPU
+utilization and throughput are recorded; the notebook configuration alone is
+not evidence of speedup.
 
 ## Later Sessions
 
